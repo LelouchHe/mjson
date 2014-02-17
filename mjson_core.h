@@ -26,7 +26,8 @@ struct mjson_t;
 typedef struct mjson_t mjson_t;
 
 struct mjson_iter_t;
-typedef mjson_iter_t *mjson_iter_t;
+typedef mjson_iter_t mjson_iter_t;
+mjson_t *mj_iter_get(mjson_iter_t mjit);
 
 mjson_t *mj_ini(int type);
 int mj_fini(mjson_t *mj);
