@@ -25,9 +25,11 @@ enum json_type_t {
 struct mjson_t;
 typedef struct mjson_t mjson_t;
 
-struct mjson_iter_t;
-typedef mjson_iter_t mjson_iter_t;
-mjson_t *mj_iter_get(mjson_iter_t mjit);
+struct mjson_iter_t {
+    mjson_t *container;
+    mjson_t *value;
+};
+typedef struct mjson_iter_t mjson_iter_t;
 
 mjson_t *mj_ini(int type);
 int mj_fini(mjson_t *mj);
@@ -43,17 +45,21 @@ mjson_t *mj_object_get(mjson_t *mj, const char *key);
 int mj_object_set(mjson_t *mj, const char *key, mjson_t *value);
 int mj_object_erase(mjson_t *mj, const char *key);
 int mj_object_size(mjson_t *mj);
-mjson_iter_t *mj_object_begin(mjson_t *mj); 
-mjson_iter_t *mj_object_end(mjson_t *mj);
-mjson_iter_t *mj_object_next(mjson_t *mj, mjson_iter_t *it);
+/*
+mjson_iter_t mj_object_begin(mjson_t *mj); 
+mjson_iter_t mj_object_end(mjson_t *mj);
+mjson_iter_t mj_object_next(mjson_t *mj, mjson_iter_t it);
+*/
 
 mjson_t *mj_array_get(mjson_t *mj, int index);
 int mj_array_set(mjson_t *mj, int index, mjson_t *value);
 int mj_array_erase(mjson_t *mj, int index);
 int mj_array_size(mjson_t *mj);
-mjson_iter_t *mj_array_begin(mjson_t *mj); 
-mjson_iter_t *mj_array_end(mjson_t *mj);
-mjson_iter_t *mj_array_next(mjson_t *mj, mjson_iter_t *it);
+/*
+mjson_iter_t mj_array_begin(mjson_t *mj); 
+mjson_iter_t mj_array_end(mjson_t *mj);
+mjson_iter_t mj_array_next(mjson_t *mj, mjson_iter_t it);
+*/
 
 const char *mj_str_get(mjson_t *mj);
 int mj_str_set(mjson_t *mj, const char *key);
