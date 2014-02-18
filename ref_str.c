@@ -7,8 +7,13 @@ struct ref_str_in_t {
     char *str;
     int ref;
 };
-
 typedef struct ref_str_in_t ref_str_in_t;
+
+struct ref_str_t {
+    int begin;
+    int end;
+    ref_str_in_t *rsi;
+};
 
 ref_str_in_t *rsi_ini(const char *str, int len) {
     if (str == NULL) {
@@ -26,7 +31,8 @@ ref_str_in_t *rsi_ini(const char *str, int len) {
         return NULL;
     }
 
-    strncpy(rsi->str, str, len + 1);
+    strncpy(rsi->str, str, len);
+    rsi->str[len] = '\0';
     rsi->ref = 1;
 
     return rsi;
@@ -46,22 +52,21 @@ int rsi_fini(ref_str_in_t *rsi) {
     return 0;
 }
 
-static const char *empty_str = "";
-
-ref_str_t rs_ini(const char *str, int len) {
+ref_str_t *rs_ini(const char *str, int len) {
     if (str == NULL) {
-        str = empty_str;
+        return NULL;
+    }
+    if (len > strlen(str)) {
+        len = strlen(str);
     }
 
-    ref_str_t rs;
-    rs.begin = 0;
-    rs.end = 0;
-    rs.rsi = rsi_ini(str, len);
-    if (rs.rsi == NULL) {
+    ref_str_t *rs = (ref_str_t *)calloc(1, sizeof (ref_str_t));
+    rs->rsi = rsi_ini(str, len);
+    if (rs->rsi == NULL) {
         return rs;
     }
 
-    rs.end = strlen(str);
+    rs->end = len;
     return rs;
 }
 
@@ -71,32 +76,41 @@ int rs_fini(ref_str_t *rs) {
     }
 
     rsi_fini(rs->rsi);
-    rs->rsi = NULL;
+    free(rs);
 
     return 0;
 }
 
-ref_str_t rs_use(ref_str_t *rs) {
-    ref_str_t nrs;
-    nrs.begin = 0;
-    nrs.end = 0;
-    nrs.rsi = NULL;
-
-    if (rs == NULL || rs->rsi == NULL) {
-        return nrs;
-    }
-
-    nrs = *rs;
-    nrs.rsi->ref++;
-
-    return nrs;
-}
-
-const char *rs_get(ref_str_t *rs) {
+ref_str_t *rs_use(ref_str_t *rs) {
     if (rs == NULL || rs->rsi == NULL) {
         return NULL;
     }
 
-    return rs->rsi->str;
+    ref_str_t *nrs = (ref_str_t *)malloc(sizeof (ref_str_t));
+    if (nrs == NULL) {
+        return NULL;
+    }
+
+    nrs->begin = rs->begin;
+    nrs->end = rs->end;
+    nrs->rsi = rs->rsi;
+    nrs->rsi->ref++;
+
+    return nrs;
+}
+
+static const ref_str_data_t null_str;
+
+ref_str_data_t rs_get(ref_str_t *rs) {
+    if (rs == NULL || rs->rsi == NULL) {
+        return null_str;
+    }
+
+    ref_str_data_t d;
+    d.begin = rs->begin;
+    d.end = rs->end;
+    d.str = rs->rsi->str;
+
+    return d;
 }
 

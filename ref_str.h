@@ -5,23 +5,11 @@
 extern "C" {
 #endif
 
-struct ref_str_in_t;
-
-/*
- *
- * 目的是作为局部变量來使用
- * 否则ref_str_t本身的生存期也需要考虑
- *
- */
-struct ref_str_t {
-    int begin;
-    int end;
-    struct ref_str_in_t *rsi;
-};
+struct ref_str_t;
 typedef struct ref_str_t ref_str_t;
 
 /* 不允许NULL赋值,会自动更新为""  */
-ref_str_t rs_ini(const char *str, int len);
+ref_str_t *rs_ini(const char *str, int len);
 int rs_fini(ref_str_t *rs);
 
 /* 
@@ -31,14 +19,24 @@ int rs_fini(ref_str_t *rs);
  * 取到指针自己设置(好危险!,不过不这样感觉使用不便)
  *
  */
-ref_str_t rs_use(ref_str_t *rs);
+ref_str_t *rs_use(ref_str_t *rs);
 
 /* 
  *
- * '\0'结尾 需要自己begin/end限制
- * 相信你了,程序员
+ * 添加辅助结构,限定边界
+ * 如果你非要超出去,我这里也没有办法啊
+ * 需要在use之后才能用,并且在fini之后不能使用
+ *
  */
-const char *rs_get(ref_str_t *rs);
+
+struct ref_str_data_t {
+    int begin;
+    int end;
+    const char *str;
+};
+typedef struct ref_str_data_t ref_str_data_t;
+
+ref_str_data_t rs_get(ref_str_t *rs);
 
 #ifdef __cplusplus
 }
