@@ -114,3 +114,20 @@ ref_str_data_t rs_get(ref_str_t *rs) {
     return d;
 }
 
+#ifdef DEBUG
+#include <stdio.h>
+
+void rs_debug(ref_str_t *rs) {
+    if (rs == NULL) {
+        printf("rs is null\n");
+        return;
+    } else if (rs->rsi == NULL) {
+        printf("rs->rsi is null\n");
+        return;
+    }
+
+    printf("begin:%d\tend:%d\n", rs->begin, rs->end);
+    printf("ref:%d\tstr:%s\n", rs->rsi->ref, rs->rsi->str);
+}
+#endif
+

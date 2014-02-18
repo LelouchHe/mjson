@@ -11,7 +11,7 @@ typedef struct map_node_t map_node_t;
  */
 struct map_node_t {
     map_node_t *next; /* 表示下一位,不一定在本链表中,如果跨链表,则指向下一个的头 */
-    const char *key;
+    ref_str_t *key;
     const void *value;/* NULL表示是链表结束 */
     int elf;          /* 第二hash */
 };
@@ -61,6 +61,7 @@ int map_fini(map_t *mm) {
     while (h != NULL) {
         map_node_t *next = h->next;
         if (!is_table_head(mm, h)) {
+            rs_fini(h->key);
             free(h);
         }
         h = next;
@@ -72,11 +73,13 @@ int map_fini(map_t *mm) {
     return MAPE_OK;
 }
 
-static long djb_hash(const char *str) {
+static long djb_hash(ref_str_t *str) {
+    ref_str_data_t d = rs_get(str);
+
     long hash = 5381;
-    int i = 0;
-    while (str[i] != '\0') {
-        hash = ((hash << 5) + hash) + str[i];
+    int i = d.begin;
+    while (i != d.end) {
+        hash = ((hash << 5) + hash) + d.str[i];
 
         i++;
     }
@@ -84,12 +87,14 @@ static long djb_hash(const char *str) {
     return hash;
 }
 
-static long elf_hash(const char *str) {
+static long elf_hash(ref_str_t *str) {
+    ref_str_data_t d = rs_get(str);
+
     long hash = 0;
     long x = 0;
-    int i = 0;
-    while (str[i] != '\0') {
-        hash = (hash << 4) + str[i];
+    int i = d.begin;
+    while (i != d.end) {
+        hash = (hash << 4) + d.str[i];
         if((x = hash & 0xF0000000L) != 0) {
             hash ^= (x >> 24);
         }
@@ -109,7 +114,7 @@ static long elf_hash(const char *str) {
  * 2. 为该key
  *
  */
-static map_node_t *find_prev(map_t *mm, const char *key) {
+static map_node_t *find_prev(map_t *mm, ref_str_t *key) {
     int hash = djb_hash(key) % mm->size;
     int elf = elf_hash(key);
     map_node_t *prev = &(mm->table[hash]);
@@ -121,7 +126,7 @@ static map_node_t *find_prev(map_t *mm, const char *key) {
     return prev;
 }
 
-const void *map_get(map_t *mm, const char *key) {
+const void *map_get(map_t *mm, ref_str_t *key) {
     if (mm == NULL || mm->num == 0) {
         return NULL;
     }
@@ -141,7 +146,7 @@ const void *map_get(map_t *mm, const char *key) {
  * 允许两不同链表头相连,合并删除工作在iter函数中操作
  *
  */
-int map_set(map_t *mm, const char *key, const void *value) {
+int map_set(map_t *mm, ref_str_t *key, const void *value) {
     if (mm == NULL) {
         return MAPE_NULL;
     }
@@ -153,6 +158,7 @@ int map_set(map_t *mm, const char *key, const void *value) {
         if (value == NULL) {
             map_node_t *cur = prev->next;
             prev->next = cur->next;
+            rs_fini(cur->key);
             free(cur);
             mm->num--;
             if (mm->num == 0) {
@@ -168,7 +174,7 @@ int map_set(map_t *mm, const char *key, const void *value) {
     }
 
     map_node_t *node = (map_node_t *)malloc(sizeof (map_node_t));
-    node->key = key;
+    node->key = rs_use(key);
     node->value = value;
     node->elf = elf_hash(node->key);
 
@@ -193,7 +199,7 @@ int map_set(map_t *mm, const char *key, const void *value) {
  */
 map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
     map_node_t h;
-    h.key = "0x1984dead";
+    h.key = NULL;
     h.value = (const void *)0x1984dead;
     h.next = mm->head;
     map_node_t *prev = &h;
@@ -226,7 +232,7 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
     return next_it;
 }
 
-const char *map_iter_getk(map_iter_t *it) {
+ref_str_t *map_iter_getk(map_iter_t *it) {
     if (it == NULL || it->v == NULL) {
         return NULL;
     }
@@ -242,10 +248,7 @@ const void *map_iter_getv(map_iter_t *it) {
     return it->v->value;
 }
 
-#ifndef DEBUG
-void map_debug(map_t *mm) {
-}
-#else
+#ifdef DEBUG
 #include <stdio.h>
 
 void map_debug(map_t *mm) {
@@ -267,7 +270,8 @@ void map_debug(map_t *mm) {
         printf("%d: ", i);
         while (prev->next != NULL && !is_table_head(mm, prev->next)) {
             map_node_t *cur = prev->next;
-            printf("(%s, %p) ->", cur->key, cur->value);
+            ref_str_data_t d = rs_get(cur->key);
+            printf("(%s, %p) ->", d.str, cur->value);
 
             prev = prev->next;
         }

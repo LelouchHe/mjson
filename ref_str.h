@@ -38,6 +38,12 @@ typedef struct ref_str_data_t ref_str_data_t;
 
 ref_str_data_t rs_get(ref_str_t *rs);
 
+#ifdef DEBUG
+void rs_debug(ref_str_t *rs);
+#else
+#define rs_debug(x)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

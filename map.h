@@ -1,6 +1,8 @@
 #ifndef _MAP_H
 #define _MAP_H
 
+#include "ref_str.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,16 +24,20 @@ typedef struct map_iter_t map_iter_t;
 map_t *map_ini(int size);
 int map_fini(map_t *mm);
 
-const void *map_get(map_t *mm, const char *key);
-int map_set(map_t *mm, const char *key, const void *value);
+const void *map_get(map_t *mm, ref_str_t *key);
+int map_set(map_t *mm, ref_str_t *key, const void *value);
 
 // map_next(mm, NULL)会返回开始
 // v=NULL表示为end
 map_iter_t map_iter_next(map_t *mm, map_iter_t *it);
-const char *map_iter_getk(map_iter_t *it);
+ref_str_t *map_iter_getk(map_iter_t *it);
 const void *map_iter_getv(map_iter_t *it);
 
+#ifdef DEBUG
 void map_debug(map_t *mm);
+#else
+#define map_debug(x) 
+#endif
 
 
 #ifdef __cplusplus
