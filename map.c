@@ -30,29 +30,11 @@ struct map_t {
  *
  */
 static int is_table_head(map_t *mm, map_node_t *n) {
-    if (n->value != NULL) {
+    if (n == NULL || n->value != NULL) {
         return 0;
     }
 
     return n >= mm->table && n < mm->table + mm->size;
-}
-
-/*
- *
- * 判断n指向的链表是否只有一个元素
- *
- */
-static int has_only_one(map_t *mm, map_node_t *n) {
-    if (!is_table_head(mm, n) || n->next == NULL) {
-        return 0;
-    }
-
-    map_node_t *cur = n->next;
-    if (cur->next == NULL || is_table_head(mm, cur->next)) {
-        return 1;
-    }
-
-    return 0;
 }
 
 map_t *map_ini(int size) {
@@ -156,8 +138,7 @@ const void *map_get(map_t *mm, const char *key) {
 /*
  *
  * value=NULL時表示删除操作
- * 只有当node在链表内部才会直接删除
- * 否则,当处于链表头且只有一个元素時,需要特别处理head,所以暂缓删除
+ * 允许两不同链表头相连,合并删除工作在iter函数中操作
  *
  */
 int map_set(map_t *mm, const char *key, const void *value) {
@@ -170,12 +151,13 @@ int map_set(map_t *mm, const char *key, const void *value) {
     if (prev->next != NULL && prev->next->value != NULL) {
         prev->next->value = value;
         if (value == NULL) {
-            if (!has_only_one(mm, prev)) {
-                map_node_t *cur = prev->next;
-                prev->next = cur->next;
-                free(cur);
-            }
+            map_node_t *cur = prev->next;
+            prev->next = cur->next;
+            free(cur);
             mm->num--;
+            if (mm->num == 0) {
+                mm->head = NULL;
+            }
             return MAPE_ERASE;
         }
         return MAPE_OVERWRITTEN;
@@ -205,12 +187,17 @@ int map_set(map_t *mm, const char *key, const void *value) {
 
 /*
  *
- * 删除map_set時没有删除的项
- * 每个链表最多一项
+ * it=NULL获取begin
+ * 顺便删除相连链表头
  *
  */
 map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
-    map_node_t *prev = mm->head;
+    map_node_t h;
+    h.key = "0x1984dead";
+    h.value = (const void *)0x1984dead;
+    h.next = mm->head;
+    map_node_t *prev = &h;
+
     if (it != NULL) {
         prev = it->v;
     }
@@ -225,11 +212,14 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
             return next_it;
         }
 
-        if (is_table_head(mm, cur)) {
-            prev = cur;
-        } else {
+        if (is_table_head(mm, cur->next)) {
             prev->next = cur->next;
-            free(cur);
+            cur->next = NULL;
+            if (mm->head == cur) {
+                mm->head = prev->next;
+            }
+        } else {
+            prev = prev->next;
         }
     }
 
@@ -265,7 +255,7 @@ void map_debug(map_t *mm) {
     }
 
     printf("size:%d\tnum:%d\n", mm->size, mm->num);
-    printf("head: %d\n", mm->head - mm->table);
+    printf("head: %d\n", mm->head == NULL ? -1 : mm->head - mm->table);
     int i = 0;
     for (i = 0; i < mm->size; i++) {
         map_node_t *prev = &(mm->table[i]);

@@ -21,17 +21,30 @@ int main() {
     map_set(m, "2", "2");
     map_set(m, "3", "3");
     map_set(m, "4", "4");
+    map_set(m, "5", "5");
+    map_set(m, "6", "6");
+    map_set(m, "7", "7");
+    map_set(m, "8", "8");
+    map_set(m, "9", "9");
+    map_set(m, "10", "10");
+    map_set(m, "11", "11");
+    map_set(m, "12", "12");
+    map_set(m, "13", "13");
+    map_set(m, "14", "14");
+    map_set(m, "15", "15");
+    map_set(m, "5", NULL);
+    map_set(m, "15", NULL);
+    map_set(m, "15", NULL);
     map_debug(m);
 
     map_iter_t it = map_iter_next(m, NULL);
-    /*
     while (it.v != NULL) {
         k = (const char *)map_iter_getk(&it);
         v = (const char *)map_iter_getv(&it);
         printf("k:%s\tv:%p\n", k, v);
         it = map_iter_next(m, &it);
     }
-    */
+    map_debug(m);
 
     map_fini(m);
 
