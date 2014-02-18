@@ -99,6 +99,10 @@ ref_str_t *rs_use(ref_str_t *rs) {
     return nrs;
 }
 
+ref_str_t *rs_move(ref_str_t *rs) {
+    return rs;
+}
+
 static const ref_str_data_t null_str;
 
 ref_str_data_t rs_get(ref_str_t *rs) {
@@ -112,6 +116,21 @@ ref_str_data_t rs_get(ref_str_t *rs) {
     d.str = rs->rsi->str;
 
     return d;
+}
+
+int rs_set_range(ref_str_t *rs, int begin, int end) {
+    if (rs == NULL) {
+        return -1;
+    }
+
+    if (begin >= rs->begin && begin <= rs->end) {
+        rs->begin = begin;
+    }
+    if (end >= rs->begin && end <= rs->end) {
+        rs->end = end;
+    }
+
+    return 0;
 }
 
 #ifdef DEBUG

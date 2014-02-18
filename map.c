@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "map.h"
 
@@ -73,34 +74,28 @@ int map_fini(map_t *mm) {
     return MAPE_OK;
 }
 
-static long djb_hash(ref_str_t *str) {
-    ref_str_data_t d = rs_get(str);
-
+static long djb_hash(const char *str, int begin, int end) {
     long hash = 5381;
-    int i = d.begin;
-    while (i != d.end) {
-        hash = ((hash << 5) + hash) + d.str[i];
+    while (begin != end) {
+        hash = ((hash << 5) + hash) + str[begin];
 
-        i++;
+        begin++;
     }
 
     return hash;
 }
 
-static long elf_hash(ref_str_t *str) {
-    ref_str_data_t d = rs_get(str);
-
+static long elf_hash(const char *str, int begin, int end) {
     long hash = 0;
     long x = 0;
-    int i = d.begin;
-    while (i != d.end) {
-        hash = (hash << 4) + d.str[i];
+    while (begin != end) {
+        hash = (hash << 4) + str[begin];
         if((x = hash & 0xF0000000L) != 0) {
             hash ^= (x >> 24);
         }
         hash &= ~x;
 
-        i++;
+        begin++;
     }
 
     return hash;
@@ -114,9 +109,9 @@ static long elf_hash(ref_str_t *str) {
  * 2. 为该key
  *
  */
-static map_node_t *find_prev(map_t *mm, ref_str_t *key) {
-    int hash = djb_hash(key) % mm->size;
-    int elf = elf_hash(key);
+static map_node_t *find_prev(map_t *mm, const char *key, int begin, int end) {
+    int hash = djb_hash(key, begin, end) % mm->size;
+    int elf = elf_hash(key, begin, end);
     map_node_t *prev = &(mm->table[hash]);
     while (prev->next != NULL && prev->next->value != NULL
         && prev->next->elf != elf) {
@@ -126,12 +121,12 @@ static map_node_t *find_prev(map_t *mm, ref_str_t *key) {
     return prev;
 }
 
-const void *map_get(map_t *mm, ref_str_t *key) {
-    if (mm == NULL || mm->num == 0) {
+static const void *map_get_raw(map_t *mm, const char *key, int begin, int end) {
+    if (key == NULL || begin >= end) {
         return NULL;
     }
 
-    map_node_t *prev = find_prev(mm, key);
+    map_node_t *prev = find_prev(mm, key, begin, end);
 
     if (prev->next != NULL && prev->next->value != NULL) {
         return prev->next->value;
@@ -140,21 +135,41 @@ const void *map_get(map_t *mm, ref_str_t *key) {
     return NULL;
 }
 
+const void *map_get_ref(map_t *mm, ref_str_t *key) {
+    if (mm == NULL || mm->num == 0 || key == NULL) {
+        return NULL;
+    }
+
+    ref_str_data_t d = rs_get(key);
+
+    return map_get_raw(mm, d.str, d.begin, d.end);
+}
+
+const void *map_get(map_t *mm, const char *key) {
+    if (mm == NULL || mm->num == 0 || key == NULL) {
+        return NULL;
+    }
+
+    return map_get_raw(mm, key, 0, strlen(key));
+}
+
 /*
  *
  * value=NULL時表示删除操作
  * 允许两不同链表头相连,合并删除工作在iter函数中操作
  *
  */
-int map_set(map_t *mm, ref_str_t *key, const void *value) {
-    if (mm == NULL) {
-        return MAPE_NULL;
-    }
 
-    map_node_t *prev = find_prev(mm, key);
+int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref) {
+    ref_str_data_t d = rs_get(key);
+    map_node_t *prev = find_prev(mm, d.str, d.begin, d.end);
 
     if (prev->next != NULL && prev->next->value != NULL) {
         prev->next->value = value;
+        /* 非引用需要清理key */
+        if (!is_ref) {
+            rs_fini(key);
+        }
         if (value == NULL) {
             map_node_t *cur = prev->next;
             prev->next = cur->next;
@@ -174,9 +189,13 @@ int map_set(map_t *mm, ref_str_t *key, const void *value) {
     }
 
     map_node_t *node = (map_node_t *)malloc(sizeof (map_node_t));
-    node->key = rs_use(key);
+    if (is_ref) {
+        node->key = rs_use(key);
+    } else {
+        node->key = rs_move(key);
+    }
     node->value = value;
-    node->elf = elf_hash(node->key);
+    node->elf = elf_hash(d.str, d.begin, d.end);
 
     node->next = prev->next;
     prev->next = node;
@@ -189,6 +208,27 @@ int map_set(map_t *mm, ref_str_t *key, const void *value) {
     mm->num++;
 
     return MAPE_OK;
+}
+
+int map_set_ref(map_t *mm, ref_str_t *key, const void *value) {
+    if (mm == NULL) {
+        return MAPE_NULL;
+    }
+
+    return map_set_raw(mm, key, value, 1);
+}
+
+int map_set(map_t *mm, const char *key, const void *value) {
+    if (mm == NULL) {
+        return MAPE_NULL;
+    }
+
+    ref_str_t *rs = rs_ini(key, -1);
+    if (rs == NULL) {
+        return MAPE_MEM;
+    }
+
+    return map_set_raw(mm, rs, value, 0);
 }
 
 /*
@@ -232,12 +272,12 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
     return next_it;
 }
 
-ref_str_t *map_iter_getk(map_iter_t *it) {
+ref_str_data_t map_iter_getk(map_iter_t *it) {
     if (it == NULL || it->v == NULL) {
-        return NULL;
+        return rs_get(NULL);
     }
 
-    return it->v->key;
+    return rs_get(it->v->key);
 }
 
 const void *map_iter_getv(map_iter_t *it) {

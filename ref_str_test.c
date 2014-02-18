@@ -10,6 +10,12 @@ int main() {
     ref_str_data_t d = rs_get(nrs);
     printf("%s\n", d.str ? d.str : "(null)");
     rs_fini(nrs);
-    rs_fini(rs);
+
+    ref_str_t *nnrs = rs_move(rs);
+
+    rs_debug(nnrs);
+
+    rs_fini(nnrs);
+
     return 0;
 }

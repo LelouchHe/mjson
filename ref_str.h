@@ -20,6 +20,10 @@ int rs_fini(ref_str_t *rs);
  *
  */
 ref_str_t *rs_use(ref_str_t *rs);
+/*
+ * 类似直接赋值,之后rs不能再使用(即不用释放了)
+ */
+ref_str_t *rs_move(ref_str_t *rs);
 
 /* 
  *
@@ -37,6 +41,7 @@ struct ref_str_data_t {
 typedef struct ref_str_data_t ref_str_data_t;
 
 ref_str_data_t rs_get(ref_str_t *rs);
+int rs_set_range(ref_str_t *rs, int begin, int end);
 
 #ifdef DEBUG
 void rs_debug(ref_str_t *rs);
