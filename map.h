@@ -22,17 +22,26 @@ struct map_iter_t {
 };
 typedef struct map_iter_t map_iter_t;
 
-map_t *map_ini(int size);
+map_t *map_ini(size_t size);
 int map_fini(map_t *mm);
 
+size_t map_size(map_t *mm);
+size_t map_num(map_t *mm);
+
 const void *map_get_ref(map_t *mm, ref_str_t *key);
+/* value=NULL表示删除 */
 int map_set_ref(map_t *mm, ref_str_t *key, const void *value);
 
 const void *map_get(map_t *mm, const char *key);
+/* value=NULL表示删除 */
 int map_set(map_t *mm, const char *key, const void *value);
 
-// map_next(mm, NULL)会返回开始
-// v=NULL表示为end
+/* 
+ *
+ * map_next(mm, NULL)会返回开始
+ * v=NULL表示为end
+ *
+ */
 map_iter_t map_iter_next(map_t *mm, map_iter_t *it);
 ref_str_data_t map_iter_getk(map_iter_t *it);
 const void *map_iter_getv(map_iter_t *it);

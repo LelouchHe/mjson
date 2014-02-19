@@ -5,17 +5,17 @@
 
 struct ref_str_in_t {
     char *str;
-    int ref;
+    size_t ref;
 };
 typedef struct ref_str_in_t ref_str_in_t;
 
 struct ref_str_t {
-    int begin;
-    int end;
+    size_t begin;
+    size_t end;
     ref_str_in_t *rsi;
 };
 
-ref_str_in_t *rsi_ini(const char *str, int len) {
+ref_str_in_t *rsi_ini(const char *str, size_t len) {
     if (str == NULL) {
         return NULL;
     }
@@ -52,11 +52,11 @@ int rsi_fini(ref_str_in_t *rsi) {
     return 0;
 }
 
-ref_str_t *rs_ini(const char *str, int len) {
+ref_str_t *rs_ini(const char *str, size_t len) {
     if (str == NULL) {
         return NULL;
     }
-    if (len > strlen(str)) {
+    if (len == 0 || len > strlen(str)) {
         len = strlen(str);
     }
 
@@ -118,7 +118,7 @@ ref_str_data_t rs_get(ref_str_t *rs) {
     return d;
 }
 
-int rs_set_range(ref_str_t *rs, int begin, int end) {
+int rs_set_range(ref_str_t *rs, size_t begin, size_t end) {
     if (rs == NULL) {
         return -1;
     }
@@ -145,8 +145,8 @@ void rs_debug(ref_str_t *rs) {
         return;
     }
 
-    printf("begin:%d\tend:%d\n", rs->begin, rs->end);
-    printf("ref:%d\tstr:%s\n", rs->rsi->ref, rs->rsi->str);
+    printf("begin:%lu\tend:%lu\n", rs->begin, rs->end);
+    printf("ref:%lu\tstr:%s\n", rs->rsi->ref, rs->rsi->str);
 }
 #endif
 

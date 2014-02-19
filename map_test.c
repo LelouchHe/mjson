@@ -3,15 +3,14 @@
 #include "map.h"
 
 int main() {
-    const ref_str_t *k = NULL;
     const char *v = NULL;
 
     ref_str_t *keys[5];
-    keys[0] = rs_ini("0", -1);
-    keys[1] = rs_ini("1", -1);
-    keys[2] = rs_ini("2", -1);
-    keys[3] = rs_ini("3", -1);
-    keys[4] = rs_ini("4", -1);
+    keys[0] = rs_ini("0", 0);
+    keys[1] = rs_ini("1", 0);
+    keys[2] = rs_ini("2", 0);
+    keys[3] = rs_ini("3", 0);
+    keys[4] = rs_ini("4", 0);
 
     map_t *m = map_ini(3);
     map_set_ref(m, keys[0], "0");

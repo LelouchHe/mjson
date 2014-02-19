@@ -19,8 +19,8 @@ struct map_node_t {
 
 struct map_t {
     map_node_t *table;
-    int size;
-    int num;          /* 元素个数 */
+    size_t size;
+    size_t num;          /* 元素个数 */
 
     map_node_t *head;  /* 指向链表开始的头 */
 };
@@ -38,11 +38,59 @@ static int is_table_head(map_t *mm, map_node_t *n) {
     return n >= mm->table && n < mm->table + mm->size;
 }
 
-map_t *map_ini(int size) {
+static size_t primes[] = {
+    17,             /* 0 */
+    37,             /* 1 */
+    79,             /* 2 */
+    163,            /* 3 */
+    331,            /* 4 */
+    673,            /* 5 */
+    1361,           /* 6 */
+    2729,           /* 7 */
+    5471,           /* 8 */
+    10949,          /* 9 */
+    21911,          /* 10 */
+    43853,          /* 11 */
+    87719,          /* 12 */
+    175447,         /* 13 */
+    350899,         /* 14 */
+    701819,         /* 15 */
+    1403641,        /* 16 */
+    2807303,        /* 17 */
+    5614657,        /* 18 */
+    11229331,       /* 19 */
+    22458671,       /* 20 */
+    44917381,       /* 21 */
+    89834777,       /* 22 */
+    179669557,      /* 23 */
+    359339171,      /* 24 */
+    718678369,      /* 25 */
+    1437356741,     /* 26 */
+    2147483647      /* 27 (largest signed int prime) */
+};
+
+static size_t up_size(size_t size) {
+    size_t l = 0;
+    size_t r = sizeof (primes) / sizeof (primes[0]);
+    while (l < r) {
+        size_t m = l + (r - l) / 2; 
+        if (size <= primes[m]) {
+            r = m;
+        } else {
+            l = m + 1;
+        }
+    }
+
+    return primes[r];
+}
+
+map_t *map_ini(size_t size) {
     map_t *mm = (map_t *)calloc(1, sizeof (map_t));
     if (mm == NULL) {
         return NULL;
     }
+    size = up_size(size);
+
     mm->size = size;
     mm->table = (map_node_t *)calloc(mm->size, sizeof (map_node_t));
     if (mm->table == NULL) {
@@ -74,7 +122,23 @@ int map_fini(map_t *mm) {
     return MAPE_OK;
 }
 
-static long djb_hash(const char *str, int begin, int end) {
+size_t map_size(map_t *mm) {
+    if (mm == NULL) {
+        return 0;
+    }
+
+    return mm->size;
+}
+
+size_t map_num(map_t *mm) {
+    if (mm == NULL) {
+        return 0;
+    }
+
+    return mm->num;
+}
+
+static long djb_hash(const char *str, size_t begin, size_t end) {
     long hash = 5381;
     while (begin != end) {
         hash = ((hash << 5) + hash) + str[begin];
@@ -85,7 +149,7 @@ static long djb_hash(const char *str, int begin, int end) {
     return hash;
 }
 
-static long elf_hash(const char *str, int begin, int end) {
+static long elf_hash(const char *str, size_t begin, size_t end) {
     long hash = 0;
     long x = 0;
     while (begin != end) {
@@ -109,7 +173,7 @@ static long elf_hash(const char *str, int begin, int end) {
  * 2. 为该key
  *
  */
-static map_node_t *find_prev(map_t *mm, const char *key, int begin, int end) {
+static map_node_t *find_prev(map_t *mm, const char *key, size_t begin, size_t end) {
     int hash = djb_hash(key, begin, end) % mm->size;
     int elf = elf_hash(key, begin, end);
     map_node_t *prev = &(mm->table[hash]);
@@ -121,7 +185,7 @@ static map_node_t *find_prev(map_t *mm, const char *key, int begin, int end) {
     return prev;
 }
 
-static const void *map_get_raw(map_t *mm, const char *key, int begin, int end) {
+static const void *map_get_raw(map_t *mm, const char *key, size_t begin, size_t end) {
     if (key == NULL || begin >= end) {
         return NULL;
     }
@@ -223,7 +287,7 @@ int map_set(map_t *mm, const char *key, const void *value) {
         return MAPE_NULL;
     }
 
-    ref_str_t *rs = rs_ini(key, -1);
+    ref_str_t *rs = rs_ini(key, 0);
     if (rs == NULL) {
         return MAPE_MEM;
     }
@@ -297,8 +361,8 @@ void map_debug(map_t *mm) {
         return;
     }
 
-    printf("size:%d\tnum:%d\n", mm->size, mm->num);
-    printf("head: %d\n", mm->head == NULL ? -1 : mm->head - mm->table);
+    printf("size:%lu\tnum:%lu\n", mm->size, mm->num);
+    printf("head: %ld\n", mm->head == NULL ? -1 : mm->head - mm->table);
     int i = 0;
     for (i = 0; i < mm->size; i++) {
         map_node_t *prev = &(mm->table[i]);
@@ -316,7 +380,7 @@ void map_debug(map_t *mm) {
             prev = prev->next;
         }
         if (prev->next != NULL) {
-            printf("next: %d", prev->next - mm->table);
+            printf("next: %ld", prev->next - mm->table);
         }
         printf("\n");
     }
