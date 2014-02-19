@@ -46,6 +46,13 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it);
 ref_str_data_t map_iter_getk(map_iter_t *it);
 const void *map_iter_getv(map_iter_t *it);
 
+/*
+ *
+ * 辅助API
+ * 基本就是上面的封装,便于使用
+ *
+ */
+
 #ifdef DEBUG
 void map_debug(map_t *mm);
 #else

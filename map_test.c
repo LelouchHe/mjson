@@ -39,9 +39,9 @@ int main() {
         ref_str_data_t d = map_iter_getk(&it);
         v = (const char *)map_iter_getv(&it);
         printf("k:%s\tv:%p\n", d.str, v);
+
         it = map_iter_next(m, &it);
     }
-
 
     rs_debug(keys[0]);
 

@@ -295,6 +295,8 @@ int map_set(map_t *mm, const char *key, const void *value) {
     return map_set_raw(mm, rs, value, 0);
 }
 
+static const map_iter_t null_iter;
+
 /*
  *
  * it=NULL获取begin
@@ -312,8 +314,7 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
         prev = it->v;
     }
 
-    map_iter_t next_it;
-    next_it.v = NULL;
+    map_iter_t next_it = null_iter;
 
     while (prev != NULL && prev->next != NULL) {
         map_node_t *cur = prev->next;
