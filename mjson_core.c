@@ -7,10 +7,20 @@
 
 #include "mjson_core.h"
 
+#define MJSON_INI(type_t, TYPE)                             \
+    do {                                                    \
+        type_t *o = (type_t *)calloc(1, sizeof (type_t));   \
+        if (o == NULL) {                                    \
+            return NULL;                                    \
+        }                                                   \
+        o->head.type = TYPE;                                \
+        return &o->head;                                    \
+    } while(0)
+
 struct mjson_t {
     int type;
     int is_dirty;
-    ref_str_t *text;
+    ref_str_t *text; /* 在改写或as_string变成独立的字符串 */
 };
 
 typedef struct mjson_object_t {
@@ -45,3 +55,16 @@ typedef struct mjson_bool_t {
 typedef struct mjson_null_t {
     mjson_t head;
 } mjson_null_t;
+
+
+mjson_t *mj_ini(int type) {
+    if (type < 0 || type > MJSON_NULL) {
+        type = MJSON_NULL;
+    }
+    switch (type) {
+        case MJSON_OBJECT:
+            MJSON_INI(mjson_object_t, type);
+            break;
+    }
+}
+int mj_fini(mjson_t *mj);
