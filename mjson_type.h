@@ -16,10 +16,9 @@ struct vector_t;
 
 typedef struct mjson_value_t {
     int type        : 3;
-    int is_root     : 1;
     int is_dirty    : 1;
     int is_str      : 1;
-    int unused      : 2;
+    int unused      : 3;
 
     ref_str_t *text;
 } mjson_value_t;

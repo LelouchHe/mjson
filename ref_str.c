@@ -216,6 +216,18 @@ int rs_set_begin(ref_str_t *rs, size_t begin) {
     return 0;
 }
 
+int rs_set_end(ref_str_t *rs, size_t end) {
+    if (rs == NULL) {
+        return -1;
+    }
+
+    if (end >= rs->begin && end < rs->end) {
+        rs->end = end;
+    }
+
+    return 0;
+}
+
 #ifdef DEBUG
 #include <stdio.h>
 

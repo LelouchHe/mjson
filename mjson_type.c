@@ -23,9 +23,48 @@ mjson_t *type_pre##_ini() {                                     \
     return mj;                                                  \
 }
 
-static const mjson_value_t true_value = {MJSON_TRUE, 0, 0, 0, 0, "true"};
-static const mjson_value_t false_value = {MJSON_FALSE, 0, 0, 0, 0, "false"};
-static const mjson_value_t null_value = {MJSON_NULL, 0, 0, 0, 0, "null"};
+#define MJSON_BASIC_FINI_FUN(type_pre, TYPE_T)      \
+int type_pre##_fini(mjson_t *mj) {                  \
+    if (!IS_TYPE(mj, TYPE_T)) {                     \
+        return -1;                                  \
+    }                                               \
+    mj->ref--;                                      \
+    if (mj->ref > 0) {                              \
+        return 0;                                   \
+    }                                               \
+                                                    \
+    if (mj->v != NULL && mj->v->text != NULL) {     \
+        if (mj->v->is_str) {                        \
+            free(mj->v->text);                      \
+        } else {                                    \
+            rs_fini(mj->v->text);                   \
+        }                                           \
+    }                                               \
+    free(mj->v);                                    \
+    free(mj);                                       \
+                                                    \
+    return 0;                                       \
+}
+
+#define MJSON_STATIC_FINI_FUN(type_pre, TYPE_T)     \
+int type_pre##_fini(mjson_t *mj) {                  \
+    if (!IS_TYPE(mj, TYPE_T)) {                     \
+        return -1;                                  \
+    }                                               \
+    mj->ref--;                                      \
+    if (mj->ref > 0) {                              \
+        return 0;                                   \
+    }                                               \
+                                                    \
+    free(mj);                                       \
+    return 0;                                       \
+}
+
+
+/* 永远不做根节点  */
+static mjson_value_t true_value = {MJSON_TRUE, 0, 0, 0, 0, "true"};
+static mjson_value_t false_value = {MJSON_FALSE, 0, 0, 0, 0, "false"};
+static mjson_value_t null_value = {MJSON_NULL, 0, 0, 0, 0, "null"};
 
 MJSON_INI_FUN(mjson_object, MJSON_OBJECT)
 MJSON_INI_FUN(mjson_array, MJSON_ARRAY)
@@ -85,13 +124,10 @@ int mjson_object_fini(mjson_t *mj) {
     }
 
     TO_TYPE(mj, mjson_object_t, mo);
-    int is_root = mo->h.is_root;
-
     if (mo->m != NULL) {
         map_iter_t it = map_iter_next(mo->m, NULL);
         while (it.v != NULL) {
             mjson_t *v = (mjson_t *)map_iter_getv(&it);
-            v->v->is_root = 1; /* 彻底删除 */
             mjson_fini(v);
 
             it = map_iter_next(mo->m, &it);
@@ -100,11 +136,7 @@ int mjson_object_fini(mjson_t *mj) {
     }
     rs_fini(mo->h.text);
     free(mo);
-
-    mj->v = NULL;
-    if (is_root) {
-        free(mj);
-    }
+    free(mj);
 
     return 0;
 }
@@ -119,29 +151,27 @@ int mjson_array_fini(mjson_t *mj) {
     }
 
     TO_TYPE(mj, mjson_array_t, ma);
-    int is_root = ma->h.is_root;
     if (ma->v != NULL) {
         size_t i = 0;
         size_t n = vec_num(ma->v);
         for (i = 0; i < n; i++) {
             mjson_t *v = (mjson_t *)vec_get(ma->v, i);
-            v->v->is_root = 1;
             mjson_fini(v);
         }
         vec_fini(ma->v);
     }
-    rs_fini(ma->text);
-
-    mj->v = NULL;
-    if (is_root) {
-        free(mj);
-    }
+    rs_fini(ma->h.text);
+    free(ma);
+    free(mj);
 
     return 0;
 }
 
-int mjson_str_fini(mjson_t *mj);
-int mjson_int_fini(mjson_t *mj);
-int mjson_true_fini(mjson_t *mj);
-int mjson_false_fini(mjson_t *mj);
-int mjson_null_fini(mjson_t *mj);
+MJSON_BASIC_FINI_FUN(mjson_str, MJSON_STRING)
+MJSON_BASIC_FINI_FUN(mjson_int, MJSON_INTEGER)
+MJSON_BASIC_FINI_FUN(mjson_double, MJSON_DOUBLE)
+
+MJSON_STATIC_FINI_FUN(mjson_true, MJSON_TRUE)
+MJSON_STATIC_FINI_FUN(mjson_false, MJSON_FALSE)
+MJSON_STATIC_FINI_FUN(mjson_null, MJSON_NULL)
+

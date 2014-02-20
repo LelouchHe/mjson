@@ -39,6 +39,8 @@ typedef struct ref_str_data_t ref_str_data_t;
 
 ref_str_data_t rs_get(ref_str_t *rs);
 int rs_set_range(ref_str_t *rs, size_t begin, size_t end);
+int rs_set_begin(ref_str_t *rs, size_t begin);
+int rs_set_end(ref_str_t *rs, size_t end);
 
 #ifdef DEBUG
 void rs_debug(ref_str_t *rs);
