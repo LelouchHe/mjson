@@ -16,23 +16,12 @@ struct ref_str_t {
 };
 
 ref_str_in_t *rsi_ini(const char *str, size_t len) {
-    if (str == NULL) {
-        return NULL;
-    }
-
     ref_str_in_t *rsi = (ref_str_in_t *)malloc(sizeof (ref_str_in_t));
     if (rsi == NULL) {
         return NULL;
     }
     
-    rsi->str = (char *)malloc((len + 1) * sizeof (char));
-    if (rsi->str == NULL) {
-        free(rsi);
-        return NULL;
-    }
-
-    strncpy(rsi->str, str, len);
-    rsi->str[len] = '\0';
+    rsi->str = str;
     rsi->ref = 1;
 
     return rsi;
@@ -47,28 +36,57 @@ int rsi_fini(ref_str_in_t *rsi) {
     if (rsi->ref == 0) {
         free(rsi->str);
         rsi->str = NULL;
+        free(rsi);
     }
 
     return 0;
+}
+
+ref_str_t *rs_ini_new(const char *str, size_t len) {
+    if (str == NULL) {
+        return NULL;
+    }
+
+    ref_str_t *rs = (ref_str_t *)calloc(1, sizeof (ref_str_t));
+    if (rs == NULL) {
+        return NULL;
+    }
+
+    rs->rsi = rsi_ini(str, len);
+    if (rs->rsi == NULL) {
+        free(rs);
+        return NULL;
+    }
+
+    rs->end = len;
+    return rs;
 }
 
 ref_str_t *rs_ini(const char *str, size_t len) {
     if (str == NULL) {
         return NULL;
     }
+
     if (len == 0 || len > strlen(str)) {
         len = strlen(str);
     }
 
-    ref_str_t *rs = (ref_str_t *)calloc(1, sizeof (ref_str_t));
-    rs->rsi = rsi_ini(str, len);
-    if (rs->rsi == NULL) {
-        return rs;
+    char *nstr = (char *)malloc((len + 1) * sizeof (char));
+    if (nstr == NULL) {
+        return NULL;
+    }
+    strncpy(nstr, str, len);
+    nstr[len] = '\0';
+
+    ref_str_t *rs = rs_ini_new(nstr, len);
+    if (rs == NULL) {
+        free(nstr);
+        return NULL;
     }
 
-    rs->end = len;
     return rs;
 }
+
 
 int rs_fini(ref_str_t *rs) {
     if (rs == NULL || rs->rsi == NULL) {
@@ -103,6 +121,59 @@ ref_str_t *rs_move(ref_str_t *rs) {
     return rs;
 }
 
+int rs_reset_new(ref_str_t *rs, const char *str, size_t len) {
+    if (rs == NULL || rs->rsi == NULL || str == NULL) {
+        return -1;
+    }
+
+    if (rs->rsi->str == str) {
+        return 0;
+    }
+
+    if (rs->rsi->ref == 1) {
+        free(rs->rsi->str);
+        rs->rsi->str = str;
+        rs->begin = 0;
+        rs->end = len;
+    } else {
+        rs->rsi->ref--;
+        rs->rsi = rsi_ini(str, len);
+        if (rs->rsi == NULL) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int rs_reset(ref_str_t *rs, const char *str, size_t len) {
+    if (rs == NULL || rs->rsi == NULL || str == NULL) {
+        return -1;
+    }
+
+    if (rs->rsi->str == str) {
+        return 0;
+    }
+
+    if (len == 0 || len > strlen(str)) {
+        len = strlen(str);
+    }
+
+    char *nstr = (char *)malloc((len + 1) * sizeof (char));
+    if (nstr == NULL) {
+        return NULL;
+    }
+    strncpy(nstr, str, len);
+    nstr[len] = '\0';
+
+    int ret = rs_reset_new(rs, nstr, len);
+    if (ret < 0) {
+        free(nstr);
+    }
+
+    return ret;
+}
+
 static const ref_str_data_t null_str;
 
 ref_str_data_t rs_get(ref_str_t *rs) {
@@ -123,11 +194,23 @@ int rs_set_range(ref_str_t *rs, size_t begin, size_t end) {
         return -1;
     }
 
-    if (begin >= rs->begin && begin <= rs->end) {
+    if (begin > rs->begin && begin <= rs->end) {
         rs->begin = begin;
     }
-    if (end >= rs->begin && end <= rs->end) {
+    if (end >= rs->begin && end < rs->end) {
         rs->end = end;
+    }
+
+    return 0;
+}
+
+int rs_set_begin(ref_str_t *rs, size_t begin) {
+    if (rs == NULL) {
+        return -1;
+    }
+
+    if (begin > rs->begin && begin <= rs->end) {
+        rs->begin = begin;
     }
 
     return 0;
