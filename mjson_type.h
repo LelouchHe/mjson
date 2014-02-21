@@ -7,9 +7,6 @@
 extern "C" {
 #endif
 
-#define IS_TYPE(mj, TYPE_T) ((mj) != NULL && (mj)->v != NULL && (mj)->v.type == TYPE_T)
-#define TO_TYPE(mj, type_t, o) type_t *(o) = (type_t *)((mj)->v)
-
 struct ref_str_t;
 struct map_t;
 struct vector_t;
@@ -22,11 +19,6 @@ typedef struct mjson_value_t {
 
     ref_str_t *text;
 } mjson_value_t;
-
-struct mjson_t {
-    size_t ref;
-    mjson_value_t *v;
-};
 
 typedef struct mjson_object_t {
     mjson_value_t h;
@@ -50,7 +42,7 @@ typedef struct mjson_int_t {
 typedef struct mjson_double_t {
     mjson_value_t h;
     double d;
-} mjson_int_t;
+} mjson_double_t;
 
 typedef struct mjson_bool_t {
     mjson_value_t h;
@@ -60,21 +52,23 @@ typedef struct mjson_null_t {
     mjson_value_t h;
 } mjson_null_t;
 
-mjson_t *mjson_object_ini();
-mjson_t *mjson_array_ini();
-mjson_t *mjson_str_ini();
-mjson_t *mjson_int_ini();
-mjson_t *mjson_true_ini();
-mjson_t *mjson_false_ini();
-mjson_t *mjson_null_ini();
+mjson_value_t *mjson_object_ini();
+mjson_value_t *mjson_array_ini();
+mjson_value_t *mjson_str_ini();
+mjson_value_t *mjson_int_ini();
+mjson_value_t *mjson_double_ini();
+mjson_value_t *mjson_true_ini();
+mjson_value_t *mjson_false_ini();
+mjson_value_t *mjson_null_ini();
 
-int mjson_object_fini(mjson_t *mj);
-int mjson_array_fini(mjson_t *mj);
-int mjson_str_fini(mjson_t *mj);
-int mjson_int_fini(mjson_t *mj);
-int mjson_true_fini(mjson_t *mj);
-int mjson_false_fini(mjson_t *mj);
-int mjson_null_fini(mjson_t *mj);
+void mjson_object_fini(mjson_value_t *mj);
+void mjson_array_fini(mjson_value_t *mj);
+void mjson_str_fini(mjson_value_t *mj);
+void mjson_int_fini(mjson_value_t *mj);
+void mjson_double_fini(mjson_value_t *mj);
+void mjson_true_fini(mjson_value_t *mj);
+void mjson_false_fini(mjson_value_t *mj);
+void mjson_null_fini(mjson_value_t *mj);
 
 #ifdef __cplusplus
 }

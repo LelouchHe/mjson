@@ -1,129 +1,80 @@
 #include <stdlib.h>
+#include <assert.h>
 
-#include "ref_str.h"
-#include "map.h"
-#include "vector.h"
+#include "util/ref_str.h"
+#include "util/map.h"
+#include "util/vector.h"
 
 #include "mjson_type.h"
 
-#define MJSON_INI_FUN(type_pre, TYPE_T)                         \
-mjson_t *type_pre##_ini() {                                     \
-    mjson_t *mj = (mjson_t *)malloc(sizeof (mjson_t));          \
-    if (mj == NULL) {                                           \
-        return NULL;                                            \
-    }                                                           \
-    mj->v = (type_pre##_t *)calloc(1, sizeof (type_pre##_t));   \
-    if (mj->v == NULL) {                                        \
-        free(mj);                                               \
-        return NULL;                                            \
-    }                                                           \
-    mj->v.type = TYPE_T;                                        \
-    mj->ref = 1;                                                \
-                                                                \
-    return mj;                                                  \
+#define MJSON_INI_FUN(type_pre, TYPE_T)                                 \
+mjson_value_t *type_pre##_ini() {                                       \
+    type_pre##_t *v = (type_pre##_t *)calloc(1, sizeof (type_pre##_t)); \
+    if (v == NULL) {                                                    \
+        return NULL;                                                    \
+    }                                                                   \
+    v->h.type = TYPE_T;                                                 \
+    return &v.h;                                                        \
 }
 
 #define MJSON_BASIC_FINI_FUN(type_pre, TYPE_T)      \
-int type_pre##_fini(mjson_t *mj) {                  \
-    if (!IS_TYPE(mj, TYPE_T)) {                     \
-        return -1;                                  \
-    }                                               \
-    mj->ref--;                                      \
-    if (mj->ref > 0) {                              \
-        return 0;                                   \
+void type_pre##_fini(mjson_value_t *mv) {           \
+    if (mv == NULL || mv->type != TYPE_T) {         \
+        return;                                     \
     }                                               \
                                                     \
-    if (mj->v != NULL && mj->v->text != NULL) {     \
-        if (mj->v->is_str) {                        \
-            free(mj->v->text);                      \
+    if (mv->text != NULL) {                         \
+        if (mv->is_str) {                           \
+            free(mv->text);                         \
         } else {                                    \
-            rs_fini(mj->v->text);                   \
+            rs_fini(mv->text);                      \
         }                                           \
+        mv->text = NULL;                            \
     }                                               \
-    free(mj->v);                                    \
-    free(mj);                                       \
-                                                    \
-    return 0;                                       \
+    free(mv);                                       \
 }
 
 #define MJSON_STATIC_FINI_FUN(type_pre, TYPE_T)     \
-int type_pre##_fini(mjson_t *mj) {                  \
-    if (!IS_TYPE(mj, TYPE_T)) {                     \
-        return -1;                                  \
+void type_pre##_fini(mjson_value_t *mv) {           \
+    if (mv == NULL || mv->type != TYPE_T) {         \
+        return;                                     \
     }                                               \
-    mj->ref--;                                      \
-    if (mj->ref > 0) {                              \
-        return 0;                                   \
-    }                                               \
-                                                    \
-    free(mj);                                       \
-    return 0;                                       \
+    mv->text = NULL;                                \
+    free(mv);                                       \
 }
 
-
-/* 永远不做根节点  */
-static mjson_value_t true_value = {MJSON_TRUE, 0, 0, 0, 0, "true"};
-static mjson_value_t false_value = {MJSON_FALSE, 0, 0, 0, 0, "false"};
-static mjson_value_t null_value = {MJSON_NULL, 0, 0, 0, 0, "null"};
+static mjson_bool_t true_value = {{MJSON_TRUE, 0, 0, 1, (ref_str_t *)"true"}};
+static mjson_bool_t false_value = {{MJSON_FALSE, 0, 0, 1, (ref_str_t *)"false"}};
+static mjson_null_t null_value = {{MJSON_NULL, 0, 0, 1, (ref_str_t *)"null"}};
 
 MJSON_INI_FUN(mjson_object, MJSON_OBJECT)
 MJSON_INI_FUN(mjson_array, MJSON_ARRAY)
 MJSON_INI_FUN(mjson_str, MJSON_STRING)
 MJSON_INI_FUN(mjson_int, MJSON_INTEGER)
-MJSON_INI_FUN(mjson_object, MJSON_DOUBLE)
+MJSON_INI_FUN(mjson_double, MJSON_DOUBLE)
 
-/*
- *
- * 只所以需要动态,是为了解决把其他类型值赋值为bool/null的情况
- * 此时很难分清是怎么來的
- * 如果不在这里统一,就需要再來一个标识位來指定
- * 只有从ini來的bool/null不能删除,其他的都需要
- * 这个可以以后作为优化加上
- *
- */
-mjson_t *mjson_true_ini() {
-    mjson_t *mj = (mjson_t *)malloc(sizeof (mjson_t));
-    if (mj == NULL) {
-        return NULL;
-    }
-    mj->v = &true_value;
-    mj->ref = 1;
-
-    return mj;
+mjson_value_t *mjson_true_ini() {
+    return &true_value.h;
 }
 
-mjson_t *mjson_false_ini() {
-    mjson_t *mj = (mjson_t *)malloc(sizeof (mjson_t));
-    if (mj == NULL) {
-        return NULL;
-    }
-    mj->v = &false_value;
-    mj->ref = 1;
-
-    return mj;
+mjson_value_t *mjson_false_ini() {
+    return &false_value.h;
 }
 
-mjson_t *mjson_null_ini() {
-    mjson_t *mj = (mjson_t *)malloc(sizeof (mjson_t));
-    if (mj == NULL) {
-        return NULL;
-    }
-    mj->v = &null_value;
-    mj->ref = 1;
-
-    return mj;
+mjson_value_t *mjson_null_ini() {
+    return &null_value.h;
 }
 
-int mjson_object_fini(mjson_t *mj) {
-    if (!IS_TYPE(mj, MJSON_OBJECT)) {
-        return -1;
+void mjson_object_fini(mjson_value_t *mv) {
+    if (mv == NULL || mv->type != MJSON_OBJECT) {
+        return;
     }
-    mj->ref--;
-    if (mj->ref > 0) {
-        return 0;
+    if (mv->text != NULL) {
+        rs_fini(mv->text);
+        mv->text = NULL;
     }
 
-    TO_TYPE(mj, mjson_object_t, mo);
+    mjson_object_t *mo = (mjson_object_t *)mv;
     if (mo->m != NULL) {
         map_iter_t it = map_iter_next(mo->m, NULL);
         while (it.v != NULL) {
@@ -133,24 +84,22 @@ int mjson_object_fini(mjson_t *mj) {
             it = map_iter_next(mo->m, &it);
         }
         map_fini(mo->m);
+        mo->m = NULL;
     }
-    rs_fini(mo->h.text);
-    free(mo);
-    free(mj);
 
-    return 0;
+    free(mo);
 }
 
-int mjson_array_fini(mjson_t *mj) {
-    if (!IS_TYPE(mj, MJSON_ARRAY)) {
-        return -1;
+void mjson_array_fini(mjson_value_t *mv) {
+    if (mj == NULL || mv->type != MJSON_ARRAY)
+        return;
     }
-    mj->ref--;
-    if (mj->ref > 0) {
-        return 0;
+    if (mv->text != NULL) {
+        rs_fini(mv->text);
+        mv->text = NULL;
     }
 
-    TO_TYPE(mj, mjson_array_t, ma);
+    mjson_array_t *ma = (mjson_array_t *)mv;
     if (ma->v != NULL) {
         size_t i = 0;
         size_t n = vec_num(ma->v);
@@ -159,12 +108,9 @@ int mjson_array_fini(mjson_t *mj) {
             mjson_fini(v);
         }
         vec_fini(ma->v);
+        ma->v = NULL;
     }
-    rs_fini(ma->h.text);
     free(ma);
-    free(mj);
-
-    return 0;
 }
 
 MJSON_BASIC_FINI_FUN(mjson_str, MJSON_STRING)

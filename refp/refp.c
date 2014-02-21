@@ -8,10 +8,10 @@
 struct refp_t {
     ref_t *r;
     void *d;
-    refp_fini_fun f;
+    rp_fini_fun f;
 };
 
-refp_t *rp_ini(void *data, refp_fini_fun f) {
+refp_t *rp_ini(void *data, rp_fini_fun f) {
     if (data == NULL) {
         return NULL;
     }
@@ -24,7 +24,7 @@ refp_t *rp_ini(void *data, refp_fini_fun f) {
     rp->d = data;
     rp->f = f;
     if (rp->f == NULL) {
-        rp->f = (refp_fini_fun)free;
+        rp->f = (rp_fini_fun)free;
     }
 
     return rp;
@@ -86,7 +86,7 @@ void rp_fini(refp_t *rp) {
     free(rp);
 }
 
-int rp_reset(refp_t *rp, void *data, refp_fini_fun f) {
+int rp_reset(refp_t *rp, void *data, rp_fini_fun f) {
     if (rp == NULL || data == NULL) {
         return REFP_NULL;
     }
@@ -103,7 +103,7 @@ int rp_reset(refp_t *rp, void *data, refp_fini_fun f) {
     t.d = data;
     t.f = f;
     if (t.f == NULL) {
-        t.f = (refp_fini_fun)free;
+        t.f = (rp_fini_fun)free;
     }
 
     if (ref_dec(rp->r) == 0) {
@@ -148,7 +148,7 @@ void rp_swap(refp_t *l, refp_t *r) {
     l->d = r->d;
     r->d = t_d;
 
-    refp_fini_fun t_f = l->f;
+    rp_fini_fun t_f = l->f;
     l->f = r->f;
     r->f = t_f;
 }

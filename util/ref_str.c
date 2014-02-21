@@ -2,10 +2,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include "ref/refp.h"
+#include "refp/refp.h"
 #include "ref_str.h"
-
-
 
 struct ref_str_t {
     size_t begin;
@@ -202,7 +200,7 @@ void rs_debug(ref_str_t *rs) {
     assert(rs->rp != NULL);
 
     printf("begin:%lu\tend:%lu\n", rs->begin, rs->end);
-    printf("ref:%d\tstr:%s\n", rp_ref(rs->rp), (char *)rp_get(rs->rp));
+    printf("ref:%lu\tstr:%s\n", rp_ref(rs->rp), (char *)rp_get(rs->rp));
 }
 #endif
 

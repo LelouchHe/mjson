@@ -12,22 +12,23 @@ extern "C" {
 #endif
 
 enum json_type_t {
-    JSON_OBJECT,
-    JSON_ARRAY,
-    JSON_STRING,
-    JSON_INTEGER,
-    JSON_DOUBLE,
-    JSON_TRUE,
-    JSON_FALSE,
-    JSON_NULL,
+    MJSON_OBJECT,
+    MJSON_ARRAY,
+    MJSON_STRING,
+    MJSON_INTEGER,
+    MJSON_DOUBLE,
+    MJSON_TRUE,
+    MJSON_FALSE,
+    MJSON_NULL,
 };
 
 struct mjson_t;
 typedef struct mjson_t mjson_t;
 
 mjson_t *mj_ini(int type);
-int mj_fini(mjson_t *mj);
+void mj_fini(mjson_t *mj);
 
+/*
 int mj_read(mjson_t *mj, const char *text, int len);
 int mj_write(mjson_t *mj, char *buf, int buf_size);
 int mj_buf_size(mjson_t *mj);
@@ -56,6 +57,7 @@ int mj_double_set(mjson_t *mj, double value);
 
 int mj_bool_get(mjson_t *mj);
 int mj_bool_set(mjson_t *mj, int value);
+*/
 
 
 #ifdef __cplusplus
