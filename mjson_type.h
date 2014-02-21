@@ -7,15 +7,19 @@
 extern "C" {
 #endif
 
+#define TO_REFP(mj, rp)  refp_t *(rp) = (refp_t *)(mj)
+/* 本身是函数调用,不要调用频繁 */
+#define TO_TYPE(mj, type_t, mt) type_t *(mt) = (type_t *)rp_get((refp_t *)(mj))
+
 struct ref_str_t;
 struct map_t;
 struct vector_t;
 
 typedef struct mjson_value_t {
-    int type        : 3;
-    int is_dirty    : 1;
-    int is_str      : 1;
-    int unused      : 3;
+    size_t type        : 3;
+    size_t is_dirty    : 1;
+    size_t is_str      : 1;
+    size_t unused      : 3;
 
     ref_str_t *text;
 } mjson_value_t;

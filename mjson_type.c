@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "refp/refp.h"
 #include "util/ref_str.h"
 #include "util/map.h"
 #include "util/vector.h"
@@ -36,16 +37,30 @@ void type_pre##_fini(mjson_value_t *mv) {           \
 
 #define MJSON_STATIC_FINI_FUN(type_pre, TYPE_T)     \
 void type_pre##_fini(mjson_value_t *mv) {           \
-    if (mv == NULL || mv->type != TYPE_T) {         \
-        return;                                     \
-    }                                               \
-    mv->text = NULL;                                \
-    free(mv);                                       \
 }
 
-static mjson_bool_t true_value = {{MJSON_TRUE, 0, 0, 1, (ref_str_t *)"true"}};
-static mjson_bool_t false_value = {{MJSON_FALSE, 0, 0, 1, (ref_str_t *)"false"}};
-static mjson_null_t null_value = {{MJSON_NULL, 0, 0, 1, (ref_str_t *)"null"}};
+#define DECLARE_VALUE_INFO(type_pre)                \
+{type_pre##_ini, type_pre##_fini}
+
+typedef mjson_value_t *(*mjson_value_ini_fun)();
+typedef void (*mjson_value_fini_fun)(mjson_value_t *mv);
+static struct mjson_value_info_t {
+    mjson_value_ini_fun ini_f;
+    mjson_value_fini_fun fini_f;
+} mjson_value_infos[] = {
+    DECLARE_VALUE_INFO(mjson_object),
+    DECLARE_VALUE_INFO(mjson_array),
+    DECLARE_VALUE_INFO(mjson_str),
+    DECLARE_VALUE_INFO(mjson_int),
+    DECLARE_VALUE_INFO(mjson_double),
+    DECLARE_VALUE_INFO(mjson_true),
+    DECLARE_VALUE_INFO(mjson_false),
+    DECLARE_VALUE_INFO(mjson_null),
+};
+
+static mjson_bool_t true_value = {{MJSON_TRUE, 0, 1, 0, (ref_str_t *)"true"}};
+static mjson_bool_t false_value = {{MJSON_FALSE, 0, 1, 0, (ref_str_t *)"false"}};
+static mjson_null_t null_value = {{MJSON_NULL, 0, 1, 0, (ref_str_t *)"null"}};
 
 MJSON_INI_FUN(mjson_object, MJSON_OBJECT)
 MJSON_INI_FUN(mjson_array, MJSON_ARRAY)
@@ -120,4 +135,41 @@ MJSON_BASIC_FINI_FUN(mjson_double, MJSON_DOUBLE)
 MJSON_STATIC_FINI_FUN(mjson_true, MJSON_TRUE)
 MJSON_STATIC_FINI_FUN(mjson_false, MJSON_FALSE)
 MJSON_STATIC_FINI_FUN(mjson_null, MJSON_NULL)
+
+
+mjson_t *mj_ini(size_t type) {
+    if (type < MJSON_OBJECT || type > MJSON_NULL) {
+        return NULL;
+    }
+
+    mjson_value_t *mv = mjson_value_infos[type].ini_f();
+    if (mv == NULL) {
+        return NULL;
+    }
+
+    refp_t *mj = rp_ini(mv, (rp_fini_fun)mjson_value_infos[type].fini_f);
+    if (mj == NULL) {
+        free(mv);
+        return NULL;
+    }
+
+    return mj;
+}
+
+void mj_fini(mjson_t *mj) {
+    if (mj == NULL) {
+        return;
+    }
+
+    rp_fini((refp_t *)mj);
+}
+
+int mj_type(mjson_t *mj) {
+    if (mj == NULL) {
+        return MJSONE_NULL;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    return mv->type;
+}
 

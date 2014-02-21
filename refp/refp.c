@@ -50,23 +50,23 @@ refp_t *rp_ini_copy(refp_t *rp) {
     return nrp;
 }
 
-int rp_assign(refp_t *l, refp_t *r) {
-    if (l == NULL || r == NULL) {
+int rp_assign(refp_t *d, refp_t *s) {
+    if (d == NULL || s == NULL) {
         return REFP_NULL;
     }
-    assert(l->r != NULL && r->r != NULL);
-    if (ref_inc(r->r) == 0) {
+    assert(d->r != NULL && s->r != NULL);
+    if (ref_inc(s->r) == 0) {
         return REFP_NULL;
     }
 
-    if (ref_dec(l->r) == 0) {
-        ref_fini(l->r);
-        l->f(l->d);
+    if (ref_dec(d->r) == 0) {
+        ref_fini(d->r);
+        d->f(d->d);
     }
 
-    l->r = r->r;
-    l->d = r->d;
-    l->f = r->f;
+    d->r = s->r;
+    d->d = s->d;
+    d->f = s->f;
 
     return REFP_OK;
 }

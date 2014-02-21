@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -8,71 +9,159 @@
 #include "refp/refp.h"
 
 #include "mjson_type.h"
+#include "mjson_parser.h"
 #include "mjson_core.h"
 
-#define DECLARE_VALUE_INFO(type_pre)                \
-{type_pre##_ini, type_pre##_fini}
-
-typedef mjson_value_t *(*mjson_value_ini_fun)();
-typedef void (*mjson_value_fini_fun)(mjson_value_t *mv);
-static struct mjson_value_info_t {
-    mjson_value_ini_fun ini_f;
-    mjson_value_fini_fun fini_f;
-} mjson_value_infos[] = {
-    DECLARE_VALUE_INFO(mjson_object),
-    DECLARE_VALUE_INFO(mjson_array),
-    DECLARE_VALUE_INFO(mjson_str),
-    DECLARE_VALUE_INFO(mjson_int),
-    DECLARE_VALUE_INFO(mjson_double),
-    DECLARE_VALUE_INFO(mjson_true),
-    DECLARE_VALUE_INFO(mjson_false),
-    DECLARE_VALUE_INFO(mjson_null),
-};
-
-struct mjson_t {
-    refp_t *rp;
-};
-
-mjson_t *mj_ini(int type) {
-    if (type < MJSON_OBJECT || type > MJSON_NULL) {
-        return NULL;
+static void set_error(mjson_error_t *pe, int stat) {
+    if (pe != NULL) {
+        pe->stat = stat;
     }
-
-    mjson_t *mj = (mjson_t *)malloc(sizeof (mjson_t));
-    if (mj == NULL) {
-        return NULL;
-    }
-
-    mjson_value_t *mv = mjson_value_infos[type].ini_f();
-    if (mv == NULL) {
-        free(mj);
-        return NULL;
-    }
-
-    mj->rp = rp_ini(mv, (rp_fini_fun)mjson_value_infos[type].fini_f);
-    if (mj->rp == NULL) {
-        free(mv);
-        free(mj);
-        return NULL;
-    }
-
-    return mj;
 }
 
-void mj_fini(mjson_t *mj) {
+/*
+ *
+ * 需要考虑mj可能被fini么?
+ * 是不是需要inc一下,保证不会销毁呢?
+ *
+ */
+
+/*
+ *
+ * 基本类型,2层判断
+ * 0. 是否解析过了(看值是否为默认,本身即为默认值的,再劳烦解析下)
+ * 1. 解析字符串是ref_str还是char*(看is_str字段即可)
+ *
+ */
+
+const char *mj_str_get_error(mjson_t *mj, mjson_error_t *pe) {
+    return NULL;
+}
+
+void mj_str_set_error(mjson_t *mj, const char *key, mjson_error_t *pe) {
+}
+
+int mj_int_get_error(mjson_t *mj, mjson_error_t *pe) {
     if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_int_t, mi);
+    if (mi->h.type != MJSON_INTEGER) {
+        set_error(pe, MJSONE_TYPE_ERROR);
+        return 0;
+    }
+
+    if (mi->h.text == NULL) {
+        // 初始化时,text为NULL,默认输出0
+        mi->i = 0;
+    } else if (mi->i == 0) {
+        if (!mi->h.is_str) {
+            ref_str_data_t d = rs_get(mi->h.text);
+            size_t len = d.end - d.begin;
+            char *text = (char *)malloc((len + 1) * sizeof (char));
+            if (text == NULL) {
+                set_error(pe, MJSONE_MEM);
+                return 0;
+            }
+            strncpy(text, d.str + d.begin, len);
+            text[len] = '\0';
+            rs_fini(mi->h.text);
+            mi->h.text = (ref_str_t *)text;
+            mi->h.is_str = 1;
+        }
+
+        mi->i = atoi((const char *)mi->h.text);
+    }
+
+    return mi->i;
+}
+
+void mj_int_set_error(mjson_t *mj, int value, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
         return;
     }
-    assert(mj->rp != NULL);
 
-    rp_fini(mj->rp);
-    mj->rp = NULL;
-    
-    free(mj);
+    TO_TYPE(mj, mjson_int_t, mi);
+    if (mi->h.type != MJSON_INTEGER) {
+        set_error(pe, MJSONE_TYPE_ERROR);
+        return;
+    }
+
+    char str[128];
+    size_t len = snprintf(str, 127, "%d", value);
+    char *text = (char *)malloc((len + 1) * sizeof (char));
+    if (text == NULL) {
+        set_error(pe, MJSONE_MEM);
+        return;
+    }
+    strncpy(text, str, len);
+    text[len] = '\0';
+
+    mi->i = value;
+    if (mi->h.text != NULL) {
+        if (mi->h.is_str) {
+            free((char *)mi->h.text);
+        } else {
+            rs_fini(mi->h.text);
+        }
+    }
+    mi->h.text = (ref_str_t *)text;
+    mi->h.is_str = 1;
 }
 
+double mj_double_get_error(mjson_t *mj, mjson_error_t *pe) {
+    return 0;
+}
 
+void mj_double_set_error(mjson_t *mj, double value, mjson_error_t *pe) {
+}
 
+/*
+ *
+ * 静态类型只用类型即可判断值
+ *
+ */
+int mj_bool_get_error(mjson_t *mj, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_bool_t, mb);
+    if (mb->h.type != MJSON_TRUE && mb->h.type != MJSON_FALSE) {
+        set_error(pe, MJSONE_TYPE_ERROR);
+        return 0;
+    }
+
+    if (mb->h.type == MJSON_TRUE) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void mj_bool_set_error(mjson_t *mj, int value, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return;
+    }
+
+    TO_TYPE(mj, mjson_bool_t, mb);
+    if (mb->h.type != MJSON_TRUE && mb->h.type != MJSON_FALSE) {
+        set_error(pe, MJSONE_TYPE_ERROR);
+        return;
+    }
+
+    TO_REFP(mj, rp);
+    if (value) {
+        rp_reset(rp, mjson_true_ini(), (rp_fini_fun)mjson_true_fini);
+    } else {
+        rp_reset(rp, mjson_false_ini(), (rp_fini_fun)mjson_false_fini);
+    }
+    set_error(pe, MJSONE_OK);
+}
 
 
 

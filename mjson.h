@@ -34,6 +34,13 @@ mjson_t *mj_null();
 
 /*
  *
+ * 赋值,不考虑类型匹配
+ *
+ */
+int mj_assign(mjson_t *d, mjson_t *s);
+
+/*
+ *
  * json的转换
  *
  */

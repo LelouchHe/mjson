@@ -26,7 +26,7 @@ void rp_fini(refp_t *rp);
  * 此时,原值不会被修改
  *
  */
-int rp_assign(refp_t *l, refp_t *r);
+int rp_assign(refp_t *d, refp_t *s);
 int rp_reset(refp_t *rp, void *data, rp_fini_fun f);
 
 void *rp_get(refp_t *rp);
