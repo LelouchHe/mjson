@@ -11,7 +11,7 @@ struct vector_t;
 typedef struct vector_t vector_t;
 
 vector_t *vec_ini(size_t size);
-int vec_fini(vector_t *vec);
+void vec_fini(vector_t *vec);
 
 size_t vec_size(vector_t *vec);
 size_t vec_num(vector_t *vec);

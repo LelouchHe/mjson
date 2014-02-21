@@ -1,46 +1,17 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
+#include "ref/refp.h"
 #include "ref_str.h"
 
-struct ref_str_in_t {
-    char *str;
-    size_t ref;
-};
-typedef struct ref_str_in_t ref_str_in_t;
+
 
 struct ref_str_t {
     size_t begin;
     size_t end;
-    ref_str_in_t *rsi;
+    refp_t *rp;
 };
-
-ref_str_in_t *rsi_ini(const char *str, size_t len) {
-    ref_str_in_t *rsi = (ref_str_in_t *)malloc(sizeof (ref_str_in_t));
-    if (rsi == NULL) {
-        return NULL;
-    }
-    
-    rsi->str = str;
-    rsi->ref = 1;
-
-    return rsi;
-}
-
-int rsi_fini(ref_str_in_t *rsi) {
-    if (rsi == NULL) {
-        return -1;
-    }
-
-    rsi->ref--;
-    if (rsi->ref == 0) {
-        free(rsi->str);
-        rsi->str = NULL;
-        free(rsi);
-    }
-
-    return 0;
-}
 
 ref_str_t *rs_ini_new(const char *str, size_t len) {
     if (str == NULL) {
@@ -52,8 +23,8 @@ ref_str_t *rs_ini_new(const char *str, size_t len) {
         return NULL;
     }
 
-    rs->rsi = rsi_ini(str, len);
-    if (rs->rsi == NULL) {
+    rs->rp = rp_ini((void *)str, NULL);
+    if (rs->rp == NULL) {
         free(rs);
         return NULL;
     }
@@ -87,22 +58,23 @@ ref_str_t *rs_ini(const char *str, size_t len) {
     return rs;
 }
 
-
-int rs_fini(ref_str_t *rs) {
-    if (rs == NULL || rs->rsi == NULL) {
-        return -1;
+void rs_fini(ref_str_t *rs) {
+    if (rs == NULL) {
+        return;
     }
+    assert(rs->rp != NULL);
 
-    rsi_fini(rs->rsi);
+    rp_fini(rs->rp);
+    rs->rp = NULL;
+
     free(rs);
-
-    return 0;
 }
 
 ref_str_t *rs_use(ref_str_t *rs) {
-    if (rs == NULL || rs->rsi == NULL) {
+    if (rs == NULL) {
         return NULL;
     }
+    assert(rs->rp != NULL);
 
     ref_str_t *nrs = (ref_str_t *)malloc(sizeof (ref_str_t));
     if (nrs == NULL) {
@@ -111,8 +83,11 @@ ref_str_t *rs_use(ref_str_t *rs) {
 
     nrs->begin = rs->begin;
     nrs->end = rs->end;
-    nrs->rsi = rs->rsi;
-    nrs->rsi->ref++;
+    nrs->rp = rp_ini_copy(rs->rp);
+    if (nrs->rp == NULL) {
+        free(nrs);
+        return NULL;
+    }
 
     return nrs;
 }
@@ -122,38 +97,25 @@ ref_str_t *rs_move(ref_str_t *rs) {
 }
 
 int rs_reset_new(ref_str_t *rs, const char *str, size_t len) {
-    if (rs == NULL || rs->rsi == NULL || str == NULL) {
+    if (rs == NULL || str == NULL) {
         return -1;
     }
+    assert(rs->rp != NULL);
 
-    if (rs->rsi->str == str) {
-        return 0;
+    if (rp_reset(rs->rp, (void *)str, NULL) < 0) {
+        return -1;
     }
-
-    if (rs->rsi->ref == 1) {
-        free(rs->rsi->str);
-        rs->rsi->str = str;
-        rs->begin = 0;
-        rs->end = len;
-    } else {
-        rs->rsi->ref--;
-        rs->rsi = rsi_ini(str, len);
-        if (rs->rsi == NULL) {
-            return -1;
-        }
-    }
+    rs->begin = 0;
+    rs->end = len;
 
     return 0;
 }
 
 int rs_reset(ref_str_t *rs, const char *str, size_t len) {
-    if (rs == NULL || rs->rsi == NULL || str == NULL) {
+    if (rs == NULL || str == NULL) {
         return -1;
     }
-
-    if (rs->rsi->str == str) {
-        return 0;
-    }
+    assert(rs->rp != NULL);
 
     if (len == 0 || len > strlen(str)) {
         len = strlen(str);
@@ -161,12 +123,12 @@ int rs_reset(ref_str_t *rs, const char *str, size_t len) {
 
     char *nstr = (char *)malloc((len + 1) * sizeof (char));
     if (nstr == NULL) {
-        return NULL;
+        return -1;
     }
     strncpy(nstr, str, len);
     nstr[len] = '\0';
 
-    int ret = rs_reset_new(rs, nstr, len);
+    int ret = rs_reset_new(rs, (void *)nstr, len);
     if (ret < 0) {
         free(nstr);
     }
@@ -177,14 +139,15 @@ int rs_reset(ref_str_t *rs, const char *str, size_t len) {
 static const ref_str_data_t null_str;
 
 ref_str_data_t rs_get(ref_str_t *rs) {
-    if (rs == NULL || rs->rsi == NULL) {
+    if (rs == NULL) {
         return null_str;
     }
+    assert(rs->rp != NULL);
 
     ref_str_data_t d;
     d.begin = rs->begin;
     d.end = rs->end;
-    d.str = rs->rsi->str;
+    d.str = (const char *)rp_get(rs->rp);
 
     return d;
 }
@@ -228,20 +191,18 @@ int rs_set_end(ref_str_t *rs, size_t end) {
     return 0;
 }
 
-#ifdef DEBUG
+#ifdef MJSON_DEBUG
 #include <stdio.h>
 
 void rs_debug(ref_str_t *rs) {
     if (rs == NULL) {
         printf("rs is null\n");
         return;
-    } else if (rs->rsi == NULL) {
-        printf("rs->rsi is null\n");
-        return;
     }
+    assert(rs->rp != NULL);
 
     printf("begin:%lu\tend:%lu\n", rs->begin, rs->end);
-    printf("ref:%lu\tstr:%s\n", rs->rsi->ref, rs->rsi->str);
+    printf("ref:%d\tstr:%s\n", rp_ref(rs->rp), (char *)rp_get(rs->rp));
 }
 #endif
 

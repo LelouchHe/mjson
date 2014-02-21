@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "map.h"
 
@@ -101,10 +102,11 @@ map_t *map_ini(size_t size) {
     return mm;
 }
 
-int map_fini(map_t *mm) {
+void map_fini(map_t *mm) {
     if (mm == NULL) {
-        return MAPE_NULL;
+        return;
     }
+    assert(mm->table != NULL);
 
     map_node_t *h = mm->head;
     while (h != NULL) {
@@ -117,15 +119,17 @@ int map_fini(map_t *mm) {
     }
 
     free(mm->table);
-    free(mm);
+    mm->table = NULL;
+    mm->head = NULL;
 
-    return MAPE_OK;
+    free(mm);
 }
 
 size_t map_size(map_t *mm) {
     if (mm == NULL) {
         return 0;
     }
+    assert(mm->table != NULL);
 
     return mm->size;
 }
@@ -134,6 +138,7 @@ size_t map_num(map_t *mm) {
     if (mm == NULL) {
         return 0;
     }
+    assert(mm->table != NULL);
 
     return mm->num;
 }
@@ -200,7 +205,12 @@ static const void *map_get_raw(map_t *mm, const char *key, size_t begin, size_t 
 }
 
 const void *map_get_ref(map_t *mm, ref_str_t *key) {
-    if (mm == NULL || mm->num == 0 || key == NULL) {
+    if (mm == NULL) {
+        return NULL;
+    }
+    assert(mm->table != NULL);
+
+    if (mm->num == 0 || key == NULL) {
         return NULL;
     }
 
@@ -210,7 +220,12 @@ const void *map_get_ref(map_t *mm, ref_str_t *key) {
 }
 
 const void *map_get(map_t *mm, const char *key) {
-    if (mm == NULL || mm->num == 0 || key == NULL) {
+    if (mm == NULL) {
+        return NULL;
+    }
+    assert(mm->table != NULL);
+
+    if (mm->num == 0 || key == NULL) {
         return NULL;
     }
 
@@ -224,7 +239,7 @@ const void *map_get(map_t *mm, const char *key) {
  *
  */
 
-int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref) {
+static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref) {
     ref_str_data_t d = rs_get(key);
     map_node_t *prev = find_prev(mm, d.str, d.begin, d.end);
 
@@ -278,6 +293,7 @@ int map_set_ref(map_t *mm, ref_str_t *key, const void *value) {
     if (mm == NULL) {
         return MAPE_NULL;
     }
+    assert(mm->table != NULL);
 
     return map_set_raw(mm, key, value, 1);
 }
@@ -286,6 +302,7 @@ int map_set(map_t *mm, const char *key, const void *value) {
     if (mm == NULL) {
         return MAPE_NULL;
     }
+    assert(mm->table != NULL);
 
     ref_str_t *rs = rs_ini(key, 0);
     if (rs == NULL) {
@@ -304,6 +321,11 @@ static const map_iter_t null_iter;
  *
  */
 map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
+    if (mm == NULL) {
+        return null_iter;
+    }
+    assert(mm->table != NULL);
+
     map_node_t h;
     h.key = NULL;
     h.value = (const void *)0x1984dead;
@@ -353,7 +375,7 @@ const void *map_iter_getv(map_iter_t *it) {
     return it->v->value;
 }
 
-#ifdef DEBUG
+#ifdef MJSON_DEBUG
 #include <stdio.h>
 
 void map_debug(map_t *mm) {
@@ -361,6 +383,7 @@ void map_debug(map_t *mm) {
         printf("mm is null\n");
         return;
     }
+    assert(mm->table != NULL);
 
     printf("size:%lu\tnum:%lu\n", mm->size, mm->num);
     printf("head: %ld\n", mm->head == NULL ? -1 : mm->head - mm->table);

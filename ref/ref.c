@@ -43,3 +43,12 @@ size_t ref_dec(ref_t *r) {
     r->r--;
     return r->r;
 }
+
+size_t ref_ref(ref_t *r) {
+    if (r == NULL) {
+        return 0;
+    }
+    assert(r->r > 0);
+
+    return r->r;
+}

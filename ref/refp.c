@@ -86,15 +86,6 @@ void rp_fini(refp_t *rp) {
     free(rp);
 }
 
-void *rp_get(refp_t *rp) {
-    if (rp == NULL) {
-        return NULL;
-    }
-    assert(rp->d != NULL);
-
-    return rp->d;
-}
-
 int rp_reset(refp_t *rp, void *data, refp_fini_fun f) {
     if (rp == NULL || data == NULL) {
         return REFP_NULL;
@@ -123,6 +114,24 @@ int rp_reset(refp_t *rp, void *data, refp_fini_fun f) {
     rp_swap(rp, &t);
 
     return REFP_OK;
+}
+
+void *rp_get(refp_t *rp) {
+    if (rp == NULL) {
+        return NULL;
+    }
+    assert(rp->d != NULL);
+
+    return rp->d;
+}
+
+size_t rp_ref(refp_t *rp) {
+    if (rp == NULL) {
+        return 0;
+    }
+    assert(rp->r != NULL);
+
+    return ref_ref(rp->r);
 }
 
 void rp_swap(refp_t *l, refp_t *r) {

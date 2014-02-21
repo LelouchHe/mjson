@@ -19,6 +19,8 @@ void ref_fini(ref_t *r);
 size_t ref_inc(ref_t *r);
 size_t ref_dec(ref_t *r);
 
+size_t ref_ref(ref_t *r);
+
 #ifdef __cplusplus
 }
 #endif

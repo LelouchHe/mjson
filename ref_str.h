@@ -12,7 +12,7 @@ typedef struct ref_str_t ref_str_t;
 ref_str_t *rs_ini(const char *str, size_t len);
 /* 直接使用新建的str,str必须在heap上 */
 ref_str_t *rs_ini_new(const char *str, size_t len);
-int rs_fini(ref_str_t *rs);
+void rs_fini(ref_str_t *rs);
 
 /* 
  *
@@ -42,7 +42,7 @@ int rs_set_range(ref_str_t *rs, size_t begin, size_t end);
 int rs_set_begin(ref_str_t *rs, size_t begin);
 int rs_set_end(ref_str_t *rs, size_t end);
 
-#ifdef DEBUG
+#ifdef MJSON_DEBUG
 void rs_debug(ref_str_t *rs);
 #else
 #define rs_debug(x)

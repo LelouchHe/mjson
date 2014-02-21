@@ -23,7 +23,7 @@ struct map_iter_t {
 typedef struct map_iter_t map_iter_t;
 
 map_t *map_ini(size_t size);
-int map_fini(map_t *mm);
+void map_fini(map_t *mm);
 
 size_t map_size(map_t *mm);
 size_t map_num(map_t *mm);
@@ -53,7 +53,7 @@ const void *map_iter_getv(map_iter_t *it);
  *
  */
 
-#ifdef DEBUG
+#ifdef MJSON_DEBUG
 void map_debug(map_t *mm);
 #else
 #define map_debug(x) 
