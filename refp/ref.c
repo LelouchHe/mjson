@@ -17,7 +17,10 @@ ref_t *ref_ini() {
 }
 
 void ref_fini(ref_t *r) {
-    assert(r == NULL || r->r == 0);
+    if (r == NULL) {
+        return;
+    }
+    assert(r->r == 0);
     free(r);
 }
 
