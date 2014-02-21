@@ -1,13 +1,13 @@
 CC = gcc
 AR = ar
 
-SRC 	= mjson_core_test.c ../mjson_core.c
+SRC 	= mjson_core_test.c
 OBJS 	= $(SRC:%.c=%.o)
-EXE		= mjson_core_test
+EXE		= test
 
 INCLUDE	= -I..
 
-LDFLAGS	= -L../lib -lrefp -lutil
+LDFLAGS	= -L../lib -lmjson -lutil -lrefp
 
 CFLAGS	= -g -Wall -DMJSON_DEBUG
 

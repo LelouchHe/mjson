@@ -14,7 +14,7 @@ mjson_value_t *type_pre##_ini() {                                       \
         return NULL;                                                    \
     }                                                                   \
     v->h.type = TYPE_T;                                                 \
-    return &v.h;                                                        \
+    return &v->h;                                                       \
 }
 
 #define MJSON_BASIC_FINI_FUN(type_pre, TYPE_T)      \
@@ -79,7 +79,7 @@ void mjson_object_fini(mjson_value_t *mv) {
         map_iter_t it = map_iter_next(mo->m, NULL);
         while (it.v != NULL) {
             mjson_t *v = (mjson_t *)map_iter_getv(&it);
-            mjson_fini(v);
+            mj_fini(v);
 
             it = map_iter_next(mo->m, &it);
         }
@@ -91,7 +91,7 @@ void mjson_object_fini(mjson_value_t *mv) {
 }
 
 void mjson_array_fini(mjson_value_t *mv) {
-    if (mj == NULL || mv->type != MJSON_ARRAY)
+    if (mv == NULL || mv->type != MJSON_ARRAY) {
         return;
     }
     if (mv->text != NULL) {
@@ -105,7 +105,7 @@ void mjson_array_fini(mjson_value_t *mv) {
         size_t n = vec_num(ma->v);
         for (i = 0; i < n; i++) {
             mjson_t *v = (mjson_t *)vec_get(ma->v, i);
-            mjson_fini(v);
+            mj_fini(v);
         }
         vec_fini(ma->v);
         ma->v = NULL;

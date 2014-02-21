@@ -12,7 +12,7 @@ LDFLAGS	=
 CFLAGS	= -g -Wall -DMJSON_DEBUG
 
 all: $(LIB)
-	cp $(LIB) ../lib
+	cp $(LIB) ../lib/
 
 $(LIB): $(OBJS)
 	$(AR) -r $@ $^

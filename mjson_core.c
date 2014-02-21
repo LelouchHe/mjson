@@ -59,13 +59,16 @@ mjson_t *mj_ini(int type) {
     return mj;
 }
 
-void mjson_fini(mjson_t *mj) {
+void mj_fini(mjson_t *mj) {
     if (mj == NULL) {
         return;
     }
     assert(mj->rp != NULL);
 
     rp_fini(mj->rp);
+    mj->rp = NULL;
+    
+    free(mj);
 }
 
 
