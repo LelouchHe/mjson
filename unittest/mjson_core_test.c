@@ -6,23 +6,24 @@
 
 int main() {
     mjson_t *mj = NULL;
-
-    mj = mj_ini(MJSON_FALSE);
-    printf("false: %d\n", mj_bool_get_error(mj, NULL));
-    mj_bool_set_error(mj, 1, NULL);
-    printf("true : %d\n", mj_bool_get_error(mj, NULL));
-    mj_fini(mj);
+    mjson_error_t e;
 
     mj = mj_ini(MJSON_INTEGER);
-    printf("%d\n", mj_int_get_error(mj, NULL));
-    mj_int_set_error(mj, INT_MAX, NULL);
-    printf("%d\n", mj_int_get_error(mj, NULL));
+    printf("%d\n", mj_get_int_error(mj, &e));
+    mj_set_int_error(mj, INT_MAX, &e);
+    printf("%d\n", mj_get_int_error(mj, &e));
     mj_fini(mj);
 
-    mj = mj_ini(MJSON_DOUBLE);
-    printf("%g\n", mj_double_get_error(mj, NULL));
-    mj_double_set_error(mj, DBL_MIN, NULL);
-    printf("%g\n", mj_double_get_error(mj, NULL));
+    mj = mj_ini(MJSON_STRING);
+    printf("%d\n", mj_get_int_error(mj, &e));
+    mj_set_int_error(mj, INT_MIN, &e);
+    printf("%d\n", mj_get_int_error(mj, &e));
+    mj_fini(mj);
+
+    mj = mj_ini(MJSON_STRING);
+    printf("%d\n", mj_get_bool_error(mj, &e));
+    mj_set_int_error(mj, 12345, &e);
+    printf("%d\n", mj_get_bool_error(mj, &e));
     mj_fini(mj);
 
     return 0;
