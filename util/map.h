@@ -1,6 +1,8 @@
 #ifndef _MAP_H
 #define _MAP_H
 
+#include <stddef.h>
+
 #include "ref_str.h"
 
 #ifdef __cplusplus

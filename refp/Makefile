@@ -5,7 +5,7 @@ SRC 	= $(wildcard *.c)
 OBJS 	= $(SRC:%.c=%.o)
 LIB 	= librefp.a
 
-INCLUDE	= 
+INCLUDE	= -I..
 
 LDFLAGS	=
 

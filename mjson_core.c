@@ -1,3 +1,5 @@
+#include "mjson_core.h"
+
 #include <stdlib.h>
 #include <assert.h>
 
@@ -8,7 +10,6 @@
 
 #include "mjson_type.h"
 #include "mjson_parser.h"
-#include "mjson_core.h"
 
 #define DECLARE_VALUE_INFO(type)                        \
 {MJSON_INI_FUN_NAME(type), MJSON_FINI_FUN_NAME(type)}

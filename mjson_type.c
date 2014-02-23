@@ -1,3 +1,5 @@
+#include "mjson_type.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +11,6 @@
 #include "util/vector.h"
 
 #include "mjson_parser.h"
-#include "mjson_type.h"
 
 #define INI_FUN(type_t, TYPE_T)                                                                         \
 mjson_value_t *MJSON_INI_FUN_NAME(type_t)() {                                                           \
@@ -175,6 +176,11 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_value_
  * h.text有值,不代表已经被解析了,所以还是需要判断下是否为默认值
  * 如果是的话,就再次解析下(如果本身就是默认值,就只好再来一次了)
  *
+ * update:
+ * 推翻上述结论
+ * 基本类型/静态类型遇到就进行解析
+ * 只有组合类型才会遇到是否解析的问题
+ *
  */
 
 int MJSON_GET_FUN_NAME(int)(mjson_value_t *mv, mjson_error_t *pe) {
@@ -191,18 +197,8 @@ int MJSON_GET_FUN_NAME(int)(mjson_value_t *mv, mjson_error_t *pe) {
     mjson_int_t *mi = (mjson_int_t *)mv;
     if (mi->h.text == NULL) {
         mi->i = 0;
-    } else if (mi->i == 0) {
-        ref_str_data_t d;
-        if (mi->h.is_str) {
-            d.str = (char *)mi->h.text;
-            d.begin = 0;
-            d.end = strlen(d.str);
-        } else {
-            d = rs_get(mi->h.text);
-        }
-
-        mi->i = parser_int(d.str, d.begin, d.end, pe);
     }
+    /* text不为NULL,证明解析过,基本类型解析即赋值 */
 
     return mi->i;
 }

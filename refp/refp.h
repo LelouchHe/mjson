@@ -1,6 +1,8 @@
 #ifndef _REFP_H
 #define _REFP_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

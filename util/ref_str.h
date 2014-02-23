@@ -1,6 +1,8 @@
 #ifndef _REF_STR_H
 #define _REF_STR_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

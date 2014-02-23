@@ -1,6 +1,8 @@
 #ifndef _VECTOR_H
 #define _VECTOR_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

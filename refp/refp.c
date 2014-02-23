@@ -2,8 +2,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "ref.h"
 #include "refp.h"
+
+#include "ref.h"
 
 struct refp_t {
     ref_t *r;

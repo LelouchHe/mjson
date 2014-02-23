@@ -2,7 +2,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "util/map.h"
+#include "map.h"
 
 typedef struct map_node_t map_node_t;
 

@@ -2,8 +2,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "refp/refp.h"
 #include "ref_str.h"
+
+#include "refp/refp.h"
 
 struct ref_str_t {
     size_t begin;
