@@ -24,13 +24,24 @@ int parser_quote_str(const char *str, size_t len);
 int parser_str(const char *str, size_t len, const char *target);
 
 /*
+ * 寻找下一个顶层的c,即跳过嵌套结构和转义
+ * 调用方需要确认返回结果
+ * r = len: 没有找到
+ * r < len && str[r] == c: 找到
+ * r < len && str[r] != c: r位置出现匹配错误
+ */
+size_t parser_find_next(const char *str, size_t len, char c);
+
+/*
  *
  * 辅助函数
  *
  */
 
-/* trim前导空格 */
+/* trim空格 */
 const char *parser_ltrim(const char *str, size_t len);
+size_t parser_rtrim(const char *str, size_t len);
+const char *parser_trim(const char *str, size_t len, size_t *nlen);
 
 #ifdef __cplusplus
 }

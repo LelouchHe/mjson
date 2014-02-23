@@ -2,11 +2,13 @@
 #define _MJSON_PARSER_H
 
 #include <stddef.h>
-#include "mjson_core.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct mjson_value_t;
+struct ref_str_t;
 
 /*
  *
@@ -14,7 +16,8 @@ extern "C" {
  * 返回的是root节点
  *
  */
-mjson_t *mjson_ini(const char *str, size_t len);
+struct mjson_value_t *mjson_ini_with_str(const char *str, size_t len);
+struct mjson_value_t *mjson_ini_with_ref(struct ref_str_t *rs, int is_move);
 
 /* 
  *
@@ -23,7 +26,7 @@ mjson_t *mjson_ini(const char *str, size_t len);
  * is_all表示是否需要递归解析
  *
  */
-int mjson_parse(mjson_t *mj, int is_all);
+int mjson_parse(struct mjson_value_t *mj, int is_all);
 
 #ifdef __cplusplus
 }

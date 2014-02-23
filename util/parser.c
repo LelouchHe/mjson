@@ -55,25 +55,52 @@ const char *parser_ltrim(const char *str, size_t len) {
     }
 }
 
+size_t parser_rtrim(const char *str, size_t len) {
+    if (str == NULL) {
+        return 0;
+    }
+
+    int i = len - 1;
+    while (i >= 0 && isspace(str[i])) {
+        i--;
+    }
+    
+    return i + 1;
+}
+
+const char *parser_trim(const char *str, size_t len, size_t *nlen) {
+    assert(nlen != NULL);
+    if (str == NULL || len == 0) {
+        *nlen = 0;
+        return NULL;
+    }
+
+    const char *nstr = parser_ltrim(str, len);
+    if (nstr == NULL) {
+        *nlen = 0;
+        return NULL;
+    }
+
+    *nlen = parser_rtrim(nstr, len - (nstr - str));
+
+    return nstr;
+}
+
 static int m_strtol(const char *str, size_t len, int *num) {
     assert(num != NULL);
     *num = 0;
 
-    const char *nstr = parser_ltrim(str, len);
-    if (nstr == NULL) {
+    if (str == NULL) {
         return 0;
     }
 
-    len -= nstr - str;
-
-    size_t nlen = len;
     if (len > MAX_INT_LEN) {
-        nlen = MAX_INT_LEN;
+        len = MAX_INT_LEN;
     }
 
     char buf[MAX_INT_LEN + 1];
-    strncpy(buf, nstr, nlen);
-    buf[nlen] = '\0';
+    strncpy(buf, str, len);
+    buf[len] = '\0';
 
     long int n = 0;
     char *end = NULL;
@@ -91,7 +118,7 @@ static int m_strtol(const char *str, size_t len, int *num) {
         }
 
         return 0;
-    } else if (nlen < len || *end != '\0') {
+    } else if (*end != '\0') {
         *num = n;
         return 0;
     } else if (n > INT_MAX) {
@@ -304,7 +331,9 @@ static int m_strtol_stat(const char *s, size_t len, int *num) {
 }
 
 int parser_int(const char *str, size_t len, int *num) {
-    if (str == NULL || len == 0) {
+    size_t nlen = 0;
+    const char *nstr = parser_trim(str, len, &nlen);
+    if (nstr == NULL || nlen == 0) {
         if (num != NULL) {
             *num = 0;
         }
@@ -316,7 +345,7 @@ int parser_int(const char *str, size_t len, int *num) {
     (void)m_strtol_stat;
 
     int n = 0;
-    int r = m_strtol(str, len, &n);
+    int r = m_strtol(nstr, nlen, &n);
     if (num != NULL) {
         *num = n;
     }
@@ -334,26 +363,22 @@ static int m_strtod(const char *str, size_t len, double *num) {
     assert(num != NULL);
     *num = 0.0;
 
-    const char *nstr = parser_ltrim(str, len);
-    if (nstr == NULL) {
+    if (str == NULL) {
         return 0;
     }
-    len -= nstr - str;
-
-    size_t nlen = len;
     if (len > MAX_DOUBLE_LEN) {
-        nlen = MAX_DOUBLE_LEN;
+        len = MAX_DOUBLE_LEN;
     }
 
     char buf[MAX_DOUBLE_LEN + 1];
-    strncpy(buf, nstr, nlen);
-    buf[nlen] = '\0';
+    strncpy(buf, str, len);
+    buf[len] = '\0';
 
     char *end = NULL;
     errno = 0;
     *num = strtod(buf, &end);
 
-    if (nlen < len || *end != '\0' || errno == ERANGE) {
+    if (*end != '\0' || errno == ERANGE) {
         return 0;
     } else {
         return 1;
@@ -361,7 +386,9 @@ static int m_strtod(const char *str, size_t len, double *num) {
 }
 
 int parser_double(const char *str, size_t len, double *num) {
-    if (str == NULL || len == 0) {
+    size_t nlen = 0;
+    const char *nstr = parser_trim(str, len, &nlen);
+    if (nstr == NULL || nlen == 0) {
         if (num != NULL) {
             *num = 0.0;
         }
@@ -369,7 +396,7 @@ int parser_double(const char *str, size_t len, double *num) {
     }
 
     double n = 0.0;
-    int r = m_strtod(str, len, &n);
+    int r = m_strtod(nstr, nlen, &n);
     if (num != NULL) {
         *num = n;
     }
@@ -378,22 +405,25 @@ int parser_double(const char *str, size_t len, double *num) {
 }
 
 int parser_quote_str(const char *str, size_t len) {
-    if (str == NULL || len == 0) {
+    size_t nlen = 0;
+    const char *nstr = parser_trim(str, len, &nlen);
+    if (nstr == NULL || nlen == 0) {
         return 0;
     }
 
-    char quote = str[0];
+    char quote = nstr[0];
     if (quote != '\'' && quote != '\"') {
         return 0;
     }
 
     size_t i = 1;
-    while (i < len) {
-        if (str[i] == '\\') {
+    while (i < nlen) {
+        if (nstr[i] == '\\') {
             /* 跳过'\\' */
             i++;
-        } else if (str[i] == quote) {
+        } else if (nstr[i] == quote) {
             /* 遇到对应的引号 */
+            quote = '\0';
             i++;
             break;
         }
@@ -401,17 +431,71 @@ int parser_quote_str(const char *str, size_t len) {
         i++;
     }
 
-    return i == len;
+    return (i == len) && (quote == '\0');
 }
 
 int parser_str(const char *str, size_t len, const char *target) {
-    if (str == NULL || len == 0 || target == NULL) {
+    if (target == NULL) {
         return 0;
     }
 
-    if (len != strlen(target)) {
+    size_t nlen = 0;
+    const char *nstr = parser_trim(str, len, &nlen);
+    if (nstr == NULL || nlen == 0) {
         return 0;
     }
 
-    return strncmp(str, target, len) == 0;
+    if (nlen != strlen(target)) {
+        return 0;
+    }
+
+    return strncmp(nstr, target, nlen) == 0;
+}
+
+size_t parser_find_next(const char *str, size_t len, char c) {
+    if (str == NULL || len == 0) {
+        return len;
+    }
+
+    /* {}嵌套数量 */
+    int object_num = 0;
+    /* []嵌套数量 */
+    int array_num = 0;
+    /* 引号最多1个而已 */
+    char quote = '\0';
+
+    size_t i = 0;
+    while (i < len) {
+        if (str[i] == '{') {
+            object_num++;
+        } else if (str[i] == '}') {
+            object_num--;
+            if (object_num < 0) {
+                break;
+            }
+        } else if (str[i] == '[') {
+            array_num++;
+        } else if (str[i] == ']') {
+            array_num--;
+            if (array_num < 0) {
+                break;
+            }
+        } else if (str[i] == '\"' || str[i] == '\'') {
+            if (quote == '\0') {
+                quote = str[i];
+            } else if (quote == str[i]) {
+                quote = '\0';
+            }
+        } else if (str[i] == '\\') {
+            i++;
+        } else if (str[i] == c) {
+            if (object_num == 0 && array_num == 0 && quote == '\0') {
+                break;
+            }
+        }
+
+        i++;
+    }
+
+    return i;
 }

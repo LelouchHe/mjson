@@ -21,7 +21,6 @@ extern "C" {
  *
  */
 
-mjson_t *mj_parse(const char *text);
 mjson_t *mj_parse_check(const char *text);
 
 mjson_t *mj_object();

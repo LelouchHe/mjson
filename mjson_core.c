@@ -11,38 +11,34 @@
 #include "mjson_type.h"
 #include "mjson_parser.h"
 
-#define DECLARE_VALUE_INFO(type)                        \
-{MJSON_INI_FUN_NAME(type), MJSON_FINI_FUN_NAME(type)}
-
-typedef mjson_value_t *(*mjson_value_ini_fun)();
-typedef void (*mjson_value_fini_fun)(mjson_value_t *mv);
-static struct mjson_value_info_t {
-    mjson_value_ini_fun ini_f;
-    mjson_value_fini_fun fini_f;
-} mjson_value_infos[] = {
-    DECLARE_VALUE_INFO(object),
-    DECLARE_VALUE_INFO(array),
-    DECLARE_VALUE_INFO(str),
-    DECLARE_VALUE_INFO(int),
-    DECLARE_VALUE_INFO(double),
-    DECLARE_VALUE_INFO(true),
-    DECLARE_VALUE_INFO(false),
-    DECLARE_VALUE_INFO(null),
-};
-
 mjson_t *mj_ini(size_t type) {
-    if (type < MJSON_OBJECT || type > MJSON_NULL) {
-        return NULL;
-    }
-
-    mjson_value_t *mv = mjson_value_infos[type].ini_f();
+    mjson_value_t *mv = mjson_ini(type);
     if (mv == NULL) {
         return NULL;
     }
 
-    refp_t *mj = rp_ini(mv, (rp_fini_fun)mjson_value_infos[type].fini_f);
+    refp_t *mj = rp_ini(mv, (rp_fini_fun)mjson_fini);
     if (mj == NULL) {
-        free(mv);
+        mjson_fini(mv);
+        return NULL;
+    }
+
+    return mj;
+}
+
+mjson_t *mj_parse(const char *str, size_t len) {
+    if (str == NULL || len == 0) {
+        return NULL;
+    }
+
+    mjson_value_t *mv = mjson_ini_with_str(str, len);
+    if (mv == NULL) {
+        return mv;
+    }
+
+    refp_t *mj = rp_ini(mv, (rp_fini_fun)mjson_fini);
+    if (mj == NULL) {
+        mjson_fini(mv);
         return NULL;
     }
 
@@ -84,21 +80,20 @@ mjson_t *GET_FUN_NAME(object)(mjson_t *mj, const char *key, mjson_error_t *pe) {
 
     TO_TYPE(mj, mjson_value_t, mv);
     if (mv->type != MJSON_OBJECT) {
-        mjson_value_t *nmv = mjson_value_infos[MJSON_OBJECT].ini_f();
+        mjson_value_t *nmv = mjson_ini(MJSON_OBJECT);
         if (nmv == NULL) {
             set_error(pe, MJSONE_MEM);
             return NULL;
         }
 
         TO_REFP(mj, rp);
-        rp_reset(rp, nmv, (rp_fini_fun)mjson_value_infos[MJSON_TRUE].fini_f);
+        rp_reset(rp, nmv, (rp_fini_fun)mjson_fini);
     }
 
     return MJSON_GET_FUN_NAME(object)(mv, key, pe);
 }
 
 void SET_FUN_NAME(object)(mjson_t *mj, const char *key, mjson_t *value, mjson_error_t *pe) {
-
 }
 
 #define GET_FUN(type_t, def)                                    \
@@ -123,13 +118,13 @@ void SET_FUN_NAME(type_t)(mjson_t *mj, type_t value, mjson_error_t *pe) {   \
     if (mv->type == TYPE_T && rp_ref(rp) == 1) {                            \
         MJSON_SET_FUN_NAME(type_t)(mv, value, pe);                          \
     } else {                                                                \
-        mjson_value_t *nmv = MJSON_INI_FUN_NAME(type_t)();                  \
+        mjson_value_t *nmv = mjson_ini(TYPE_T);                             \
         if (nmv == NULL) {                                                  \
             set_error(pe, MJSONE_MEM);                                      \
             return;                                                         \
         }                                                                   \
         MJSON_SET_FUN_NAME(type_t)(nmv, value, pe);                         \
-        rp_reset(rp, nmv, (rp_fini_fun)MJSON_FINI_FUN_NAME(type_t));        \
+        rp_reset(rp, nmv, (rp_fini_fun)mjson_fini);                         \
     }                                                                       \
     set_error(pe, MJSONE_OK);                                               \
 }
@@ -197,9 +192,9 @@ void SET_FUN_NAME(bool)(mjson_t *mj, int value, mjson_error_t *pe) {
 
     TO_REFP(mj, rp);
     if (value) {
-        rp_reset(rp, mjson_value_infos[MJSON_TRUE].ini_f(), (rp_fini_fun)mjson_value_infos[MJSON_TRUE].fini_f);
+        rp_reset(rp, mjson_ini(MJSON_TRUE), (rp_fini_fun)mjson_fini);
     } else {
-        rp_reset(rp, mjson_value_infos[MJSON_FALSE].ini_f(), (rp_fini_fun)mjson_value_infos[MJSON_FALSE].fini_f);
+        rp_reset(rp, mjson_ini(MJSON_FALSE), (rp_fini_fun)mjson_fini);
     }
     set_error(pe, MJSONE_OK);
 }
@@ -221,5 +216,5 @@ void SET_FUN_NAME(null)(mjson_t *mj, mjson_error_t *pe) {
     }
 
     TO_REFP(mj, rp);
-    rp_reset(rp, mjson_value_infos[MJSON_NULL].ini_f(), (rp_fini_fun)mjson_value_infos[MJSON_NULL].fini_f);
+    rp_reset(rp, mjson_ini(MJSON_NULL), (rp_fini_fun)mjson_fini);
 }

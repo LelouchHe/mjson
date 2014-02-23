@@ -11,8 +11,6 @@ extern "C" {
 
 #define MJSON_TYPE_NAME(type) mjson_##type##_t
 
-#define MJSON_INI_FUN_NAME(type) mjson_##type##_ini
-#define MJSON_FINI_FUN_NAME(type) mjson_##type##_fini
 #define MJSON_GET_FUN_NAME(type) mjson_##type##_get
 #define MJSON_SET_FUN_NAME(type) mjson_##type##_set
 
@@ -66,26 +64,14 @@ typedef struct mjson_null_t {
 } mjson_null_t;
 
 /*
+ *
  * 构造函数/析构函数
+ * 这些函数构造统一
+ *
  */
 
-mjson_value_t *mjson_object_ini();
-mjson_value_t *mjson_array_ini();
-mjson_value_t *mjson_str_ini();
-mjson_value_t *mjson_int_ini();
-mjson_value_t *mjson_double_ini();
-mjson_value_t *mjson_true_ini();
-mjson_value_t *mjson_false_ini();
-mjson_value_t *mjson_null_ini();
-
-void mjson_object_fini(mjson_value_t *mv);
-void mjson_array_fini(mjson_value_t *mv);
-void mjson_str_fini(mjson_value_t *mv);
-void mjson_int_fini(mjson_value_t *mv);
-void mjson_double_fini(mjson_value_t *mv);
-void mjson_true_fini(mjson_value_t *mv);
-void mjson_false_fini(mjson_value_t *mv);
-void mjson_null_fini(mjson_value_t *mv);
+mjson_value_t *mjson_ini(size_t type);
+void mjson_fini(mjson_value_t *mv);
 
 /*
  * get/set

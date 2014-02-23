@@ -41,6 +41,7 @@ struct mjson_error_t {
 typedef struct mjson_error_t mjson_error_t;
 
 mjson_t *mj_ini(size_t type);
+mjson_t *mj_parse(const char *str, size_t len);
 void mj_fini(mjson_t *mj);
 
 /*

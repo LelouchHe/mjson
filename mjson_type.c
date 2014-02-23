@@ -12,6 +12,9 @@
 
 #include "mjson_parser.h"
 
+#define MJSON_INI_FUN_NAME(type) mjson_##type##_ini
+#define MJSON_FINI_FUN_NAME(type) mjson_##type##_fini
+
 #define INI_FUN(type_t, TYPE_T)                                                                         \
 mjson_value_t *MJSON_INI_FUN_NAME(type_t)() {                                                           \
     MJSON_TYPE_NAME(type_t) *v = (MJSON_TYPE_NAME(type_t) *)calloc(1, sizeof (MJSON_TYPE_NAME(type_t)));\
@@ -140,7 +143,7 @@ mjson_value_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mj
     mjson_object_t *mo = (mjson_object_t *)mv;
     if (mo->m == NULL) {
         if (mo->h.text == NULL) {
-            mo->m = map_ini(16);
+            mo->m = map_ini(0);
             if (mo->m == NULL) {
                 set_error(pe, MJSONE_MEM);
                 return NULL;
@@ -149,14 +152,15 @@ mjson_value_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mj
         }
     }
 
-    mjson_value_t *nmv = (mjson_value_t *)map_get(mo->m, key);
+    size_t key_len = strlen(key);
+    mjson_value_t *nmv = (mjson_value_t *)map_get(mo->m, key, key_len);
     if (nmv == NULL) {
         nmv = mjson_null_ini();
         if (nmv == NULL) {
             set_error(pe, MJSONE_MEM);
             return NULL;
         }
-        map_set(mo->m, key, nmv);
+        map_set(mo->m, key, key_len, nmv);
         mo->h.is_dirty = 1;
     }
 
@@ -258,25 +262,6 @@ double MJSON_GET_FUN_NAME(double)(mjson_value_t *mv, mjson_error_t *pe) {
     mjson_double_t *md = (mjson_double_t *)mv;
     if (md->h.text == NULL) {
         md->d = 0.0;
-    } else if (md->d == 0.0) {
-        if (!md->h.is_str) {
-            ref_str_data_t d = rs_get(md->h.text);
-            size_t len = d.end - d.begin;
-            char *text = (char *)malloc((len + 1) * sizeof (char));
-            if (text == NULL) {
-                set_error(pe, MJSONE_MEM);
-                return 0;
-            }
-            strncpy(text, d.str + d.begin, len);
-            text[len] = '\0';
-
-            rs_fini(md->h.text);
-
-            md->h.text = (ref_str_t *)text;
-            md->h.is_str = 1;
-        }
-
-        md->d = strtod((const char *)md->h.text, NULL);
     }
 
     return md->d;
@@ -323,3 +308,37 @@ void MJSON_SET_FUN_NAME(double)(mjson_value_t *mv, double value, mjson_error_t *
     set_error(pe, MJSONE_OK);
 }
 
+#define DECLARE_VALUE_INFO(type)                        \
+{MJSON_INI_FUN_NAME(type), MJSON_FINI_FUN_NAME(type)}
+
+typedef mjson_value_t *(*mjson_value_ini_fun)();
+typedef void (*mjson_value_fini_fun)(mjson_value_t *mv);
+static struct mjson_value_info_t {
+    mjson_value_ini_fun ini_f;
+    mjson_value_fini_fun fini_f;
+} mjson_value_infos[] = {
+    DECLARE_VALUE_INFO(object),
+    DECLARE_VALUE_INFO(array),
+    DECLARE_VALUE_INFO(str),
+    DECLARE_VALUE_INFO(int),
+    DECLARE_VALUE_INFO(double),
+    DECLARE_VALUE_INFO(true),
+    DECLARE_VALUE_INFO(false),
+    DECLARE_VALUE_INFO(null),
+};
+
+mjson_value_t *mjson_ini(size_t type) {
+    if (type < MJSON_OBJECT || type > MJSON_NULL) {
+        return NULL;
+    }
+
+    return mjson_value_infos[type].ini_f();
+}
+
+void mjson_fini(mjson_value_t *mv) {
+    if (mv == NULL) {
+        return;
+    }
+
+    mjson_value_infos[mv->type].fini_f(mv);
+}

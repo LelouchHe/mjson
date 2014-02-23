@@ -32,11 +32,11 @@ size_t map_num(map_t *mm);
 
 const void *map_get_ref(map_t *mm, ref_str_t *key);
 /* value=NULL表示删除 */
-int map_set_ref(map_t *mm, ref_str_t *key, const void *value);
+int map_set_ref(map_t *mm, ref_str_t *key, const void *value, int is_move);
 
-const void *map_get(map_t *mm, const char *key);
+const void *map_get(map_t *mm, const char *key, size_t len);
 /* value=NULL表示删除 */
-int map_set(map_t *mm, const char *key, const void *value);
+int map_set(map_t *mm, const char *key, size_t len, const void *value);
 
 /* 
  *

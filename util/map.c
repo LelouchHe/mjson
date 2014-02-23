@@ -219,7 +219,7 @@ const void *map_get_ref(map_t *mm, ref_str_t *key) {
     return map_get_raw(mm, d.str, d.begin, d.end);
 }
 
-const void *map_get(map_t *mm, const char *key) {
+const void *map_get(map_t *mm, const char *key, size_t len) {
     if (mm == NULL) {
         return NULL;
     }
@@ -229,7 +229,7 @@ const void *map_get(map_t *mm, const char *key) {
         return NULL;
     }
 
-    return map_get_raw(mm, key, 0, strlen(key));
+    return map_get_raw(mm, key, 0, len);
 }
 
 /*
@@ -239,14 +239,14 @@ const void *map_get(map_t *mm, const char *key) {
  *
  */
 
-static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref) {
+static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_move) {
     ref_str_data_t d = rs_get(key);
     map_node_t *prev = find_prev(mm, d.str, d.begin, d.end);
 
     if (prev->next != NULL && prev->next->value != NULL) {
         prev->next->value = value;
-        /* 非引用需要清理key */
-        if (!is_ref) {
+        /* 非移动需要清理key */
+        if (is_move) {
             rs_fini(key);
         }
         if (value == NULL) {
@@ -268,10 +268,16 @@ static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref)
     }
 
     map_node_t *node = (map_node_t *)malloc(sizeof (map_node_t));
-    if (is_ref) {
-        node->key = rs_use(key);
-    } else {
+    if (node == NULL) {
+        if (is_move) {
+            rs_fini(key);
+        }
+        return MAPE_MEM;
+    }
+    if (is_move) {
         node->key = rs_move(key);
+    } else {
+        node->key = rs_use(key);
     }
     node->value = value;
     node->elf = elf_hash(d.str, d.begin, d.end);
@@ -289,22 +295,22 @@ static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_ref)
     return MAPE_OK;
 }
 
-int map_set_ref(map_t *mm, ref_str_t *key, const void *value) {
+int map_set_ref(map_t *mm, ref_str_t *key, const void *value, int is_move) {
     if (mm == NULL) {
         return MAPE_NULL;
     }
     assert(mm->table != NULL);
 
-    return map_set_raw(mm, key, value, 1);
+    return map_set_raw(mm, key, value, is_move);
 }
 
-int map_set(map_t *mm, const char *key, const void *value) {
+int map_set(map_t *mm, const char *key, size_t len, const void *value) {
     if (mm == NULL) {
         return MAPE_NULL;
     }
     assert(mm->table != NULL);
 
-    ref_str_t *rs = rs_ini(key, 0);
+    ref_str_t *rs = rs_ini(key, len);
     if (rs == NULL) {
         return MAPE_MEM;
     }
