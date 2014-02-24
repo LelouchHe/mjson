@@ -210,7 +210,7 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
     if (mo->h.text == NULL) {
         if (mo->m == NULL) {
             mo->m = map_ini(0);
-            if (mo->m = NULL) {
+            if (mo->m == NULL) {
                 set_error(pe, MJSONE_MEM);
                 return;
             }
@@ -222,7 +222,7 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
     }
 
     assert(mo->m != NULL);
-    map_set(mo->m, key, strlen(key), v);
+    map_set(mo->m, key, strlen(key), value);
 }
 
 /*

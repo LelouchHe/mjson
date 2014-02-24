@@ -72,7 +72,7 @@ int mj_type(mjson_t *mj) {
 #define GET_FUN_NAME(type) mj_get_##type##_error
 #define SET_FUN_NAME(type) mj_set_##type##_error
 
-mjson_t *GET_FUN_NAME(object)(mjson_t *mj, const char *key, mjson_error_t *pe) {
+mjson_t *GET_FUN_NAME(kv)(mjson_t *mj, const char *key, mjson_error_t *pe) {
     if (mj == NULL) {
         set_error(pe, MJSONE_NULL);
         return NULL;
@@ -93,7 +93,25 @@ mjson_t *GET_FUN_NAME(object)(mjson_t *mj, const char *key, mjson_error_t *pe) {
     return MJSON_GET_FUN_NAME(object)(mv, key, pe);
 }
 
-void SET_FUN_NAME(object)(mjson_t *mj, const char *key, mjson_t *value, mjson_error_t *pe) {
+void SET_FUN_NAME(kv)(mjson_t *mj, const char *key, mjson_t *value, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    if (mv->type != MJSON_OBJECT) {
+        mjson_value_t *nmv = mjson_ini(MJSON_OBJECT);
+        if (nmv == NULL) {
+            set_error(pe, MJSONE_MEM);
+            return;
+        }
+
+        TO_REFP(mj, rp);
+        rp_reset(rp, nmv, (rp_fini_fun)mjson_fini);
+    }
+
+    MJSON_SET_FUN_NAME(object)(mv, key, value, pe);
 }
 
 #define GET_FUN(type_t, def)                                    \

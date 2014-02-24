@@ -35,8 +35,14 @@ int main(int argc, char *argv[]) {
     mj = mj_parse(str, strlen(str));
     printf("type: %d\n", mj_type(mj));
     if (mj_type(mj) == MJSON_OBJECT) {
-        mjson_t *v = mj_get_object_error(mj, "a", NULL);
+        mjson_t *v = mj_get_kv_error(mj, "a", NULL);
         printf("type: %d\nint:%d\n", mj_type(v), mj_get_int_error(v, NULL));
+
+        const char *data = "+nan";
+        mj_set_kv_error(mj, "a", mj_parse(data, strlen(data)), NULL);
+
+        v = mj_get_kv_error(mj, "a", NULL);
+        printf("type: %d\ndouble:%g\n", mj_type(v), mj_get_double_error(v, NULL));
     }
     mj_fini(mj);
 
