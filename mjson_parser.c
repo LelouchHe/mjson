@@ -36,11 +36,15 @@ static int mp_type(const char *str, size_t len) {
     int type = -1;
     switch (str[0]) {
     case '{':
-        type = MJSON_OBJECT;
+        if (str[len - 1] == '}') {
+            type = MJSON_OBJECT;
+        }
         break;
 
     case '[':
-        type = MJSON_ARRAY;
+        if (str[len - 1] == ']') {
+            type = MJSON_ARRAY;
+        }
         break;
 
     case '\"':
@@ -153,11 +157,6 @@ mjson_value_t *mjson_ini_with_ref(ref_str_t *rs, int is_move) {
     }
     rs_set_range(mv->text, nstr - d.str, nstr - d.str + nlen);
 
-    if (mjson_parse(mv, 0) < 0) {
-        mjson_fini(mv);
-        return NULL;
-    }
-
     return mv;
 }
 
@@ -203,10 +202,6 @@ static ref_str_t *mp_trim_str(const char *str, size_t len, ref_str_t *up) {
 }
 
 static map_t *mp_object_ini(ref_str_t *rs) {
-    if (rs == NULL) {
-        return NULL;
-    }
-
     ref_str_data_t d = rs_get(rs);
     const char *str = d.str + d.begin;
     size_t len = d.end - d.begin;
@@ -220,30 +215,51 @@ static map_t *mp_object_ini(ref_str_t *rs) {
         return NULL;
     }
 
+    /* 跳过前后括号 */
     size_t i = 1;
+    len--;
     while (i < len) {
-        size_t kv_end = parser_find_next(str, len, ',');
-        size_t k_end = parser_find_next(str, kv_end, ':');
-
-        ref_str_t *key = mp_trim_str(str, k_end, rs);
-        if (key == NULL) {
+        size_t kv_end = parser_find_next(str, i, len, ',');
+        /* 解析非法 */
+        if (kv_end < len && str[kv_end] != ',') {
+            map_fini(m);
+            return NULL;
+        }
+        size_t k_end = parser_find_next(str, i, kv_end, ':');
+        /* 解析非法 */
+        if (k_end < kv_end && str[k_end] != ':') {
             map_fini(m);
             return NULL;
         }
 
-        ref_str_t *value = mp_trim_str(str + k_end + 1, kv_end - k_end - 1, rs);
+        if (k_end == kv_end) {
+            /* 单独的k,如果为空,可以接受 */
+            while (i < kv_end && isspace(str[i])) {
+                i++;
+            }
+            if (i == kv_end) {
+                i++;
+                continue;
+            }
+            /* 不为空,非法 */
+            map_fini(m);
+            return NULL;
+        }
+
+        /*
+         * 先解析value,是为了推迟key的处理
+         * 因为value有很多失败的机会
+         */
+
+        ref_str_t *value = mp_trim_str(str + k_end + 1, kv_end - (k_end + 1), rs);
         if (value == NULL) {
-            rs_fini(key);
-
             map_fini(m);
             return NULL;
         }
 
+        /* value不作解析,只识别类型 */
         mjson_value_t *mv = mjson_ini_with_ref(value, 1);
         if (mv == NULL) {
-            rs_fini(value);
-            rs_fini(key);
-
             map_fini(m);
             return NULL;
         }
@@ -251,22 +267,29 @@ static map_t *mp_object_ini(ref_str_t *rs) {
         mjson_t *mj = (mjson_t *)rp_ini(mv, (rp_fini_fun)mjson_fini);
         if (mj == NULL) {
             mjson_fini(mv);
-            rs_fini(key);
+            map_fini(m);
+            return NULL;
+        }
 
+        /* key必须为quote字符串 */
+        if (str[i] != str[k_end - 1]
+            || (str[i] != '\"' && str[i] != '\'')) {
+            map_fini(m);
+            return NULL;
+        }
+        ref_str_t *key = mp_trim_str(str + i + 1, (k_end - 1) - (i + 1), rs);
+        if (key == NULL) {
             map_fini(m);
             return NULL;
         }
 
         if (map_set_ref(m, key, mj, 1) < 0) {
             mj_fini(mj);
-
             map_fini(m);
             return NULL;
         }
 
-        i += kv_end + 1;
-        str += kv_end + 1;
-        len -= kv_end + 1;
+        i = kv_end + 1;
     }
 
     return m;
@@ -299,9 +322,8 @@ int mjson_parse(mjson_value_t *mv, int is_all) {
     /* 暂时只解析一层 */
     assert(is_all == 0);
 
-    if (mv->text == NULL) {
-        return -1;
-    }
+    /* 必须是赋值过的 */
+    assert(mv->text != NULL);
 
     switch (mv->type) {
     case MJSON_OBJECT:

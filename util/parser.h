@@ -25,12 +25,13 @@ int parser_str(const char *str, size_t len, const char *target);
 
 /*
  * 寻找下一个顶层的c,即跳过嵌套结构和转义
+ * c不能是{}[]"'\
  * 调用方需要确认返回结果
  * r = len: 没有找到
  * r < len && str[r] == c: 找到
  * r < len && str[r] != c: r位置出现匹配错误
  */
-size_t parser_find_next(const char *str, size_t len, char c);
+size_t parser_find_next(const char *str, size_t begin, size_t end, char c);
 
 /*
  *

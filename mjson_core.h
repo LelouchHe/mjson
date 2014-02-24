@@ -19,6 +19,7 @@ extern "C" {
 #define MJSONE_MEM -3
 #define MJSONE_RANGE -3
 #define MJSONE_NUM -4
+#define MJSONE_PARSE -5
 
 enum json_type_t {
     MJSON_OBJECT,

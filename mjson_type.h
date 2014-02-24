@@ -77,8 +77,8 @@ void mjson_fini(mjson_value_t *mv);
  * get/set
  */
 
-mjson_value_t *mjson_object_get(mjson_value_t *mv, const char *key, mjson_error_t *pe);
-void mjson_object_set(mjson_value_t *mv, const char *key, mjson_value_t *value, mjson_error_t *pe);
+mjson_t *mjson_object_get(mjson_value_t *mv, const char *key, mjson_error_t *pe);
+void mjson_object_set(mjson_value_t *mv, const char *key, mjson_t *value, mjson_error_t *pe);
 
 /*
 mjson_value_t *mjson_array_get(mjson_value_t *mv, size_t index, mjson_error_t *pe);

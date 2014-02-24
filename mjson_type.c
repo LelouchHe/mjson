@@ -130,7 +130,30 @@ void set_error(mjson_error_t *pe, int stat) {
     }
 }
 
-mjson_value_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_error_t *pe) {
+/*
+ *
+ * get过程:
+ * 0. text == NULL: 尚未赋值
+ *                  组合类型:需要生成对应的结构(因为需要返回默认MJSON_NULL)
+ *                  基本类型:默认值可以直接赋值
+ * 1. text != NULL: 已经赋值
+ *                  组合类型:进行parse即可,最后肯定有正确的内部结构(assert之)
+ *                  基本类型:同上,需要parse
+ * 
+ * set过程:
+ * 0. text == NULL: 尚未赋值
+ *                  组合类型:不需要默认text,因为很快会进行赋值,这样成了浪费
+ *                  基本类型:直接赋值即可,本身來进行解决
+ * 1. text != NULL: 已经赋值 
+ *                  组合类型:parse得正确结构,再进行处理
+ *                  基本类型:释放原结构即可
+ *
+ * 为了减少浪费,所以要在这里深入json结构内部,而无法用parser隐藏
+ * 不过set过程其实无法用parser來隐藏,同样是要暴露结构的,所以应该还好
+ *
+ */
+
+mjson_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_error_t *pe) {
     if (mv == NULL) {
         set_error(pe, MJSONE_NULL);
         return NULL;
@@ -141,49 +164,71 @@ mjson_value_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mj
     }
 
     mjson_object_t *mo = (mjson_object_t *)mv;
-    if (mo->m == NULL) {
-        if (mo->h.text == NULL) {
+    if (mo->h.text == NULL) {
+        if (mo->m == NULL) {
             mo->m = map_ini(0);
             if (mo->m == NULL) {
                 set_error(pe, MJSONE_MEM);
                 return NULL;
             }
+            /* 进行了修改 */
             mo->h.is_dirty = 1;
         }
+    } else if (mjson_parse(mv, 0) < 0) {
+        set_error(pe, MJSONE_PARSE);
+        return NULL;
     }
+    assert(mo->m != NULL);
 
     size_t key_len = strlen(key);
-    mjson_value_t *nmv = (mjson_value_t *)map_get(mo->m, key, key_len);
-    if (nmv == NULL) {
-        nmv = mjson_null_ini();
-        if (nmv == NULL) {
+    mjson_t *v = (mjson_t *)map_get(mo->m, key, key_len);
+    if (v == NULL) {
+        v = mj_ini(MJSON_NULL);
+        if (v == NULL) {
             set_error(pe, MJSONE_MEM);
             return NULL;
         }
-        map_set(mo->m, key, key_len, nmv);
+        map_set(mo->m, key, key_len, v);
         mo->h.is_dirty = 1;
     }
 
-    return nmv;
+    return v;
 }
 
-void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_value_t *value, mjson_error_t *pe) {
+void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *value, mjson_error_t *pe) {
+    if (mv == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return;
+    }
 
+    if (mv->type != MJSON_OBJECT) {
+        set_error(pe, MJSONE_TYPE);
+        return;
+    }
+
+    mjson_object_t *mo = (mjson_object_t *)mv;
+    if (mo->h.text == NULL) {
+        if (mo->m == NULL) {
+            mo->m = map_ini(0);
+            if (mo->m = NULL) {
+                set_error(pe, MJSONE_MEM);
+                return;
+            }
+            mo->h.is_dirty = 1;;
+        }
+    } else if (mjson_parse(mv, 0) < 0) {
+        set_error(pe, MJSONE_PARSE);
+        return;
+    }
+
+    assert(mo->m != NULL);
+    map_set(mo->m, key, strlen(key), v);
 }
 
 /*
  *
- * 基本类型,2层判断
- * 0. 是否解析过了(看值是否为默认,本身即为默认值的,再劳烦解析下)
- * 1. 解析字符串是ref_str还是char*(看is_str字段即可)
+ * 基本类型
  *
- * h.text有值,不代表已经被解析了,所以还是需要判断下是否为默认值
- * 如果是的话,就再次解析下(如果本身就是默认值,就只好再来一次了)
- *
- * update:
- * 推翻上述结论
- * 基本类型/静态类型遇到就进行解析
- * 只有组合类型才会遇到是否解析的问题
  *
  */
 
@@ -201,8 +246,10 @@ int MJSON_GET_FUN_NAME(int)(mjson_value_t *mv, mjson_error_t *pe) {
     mjson_int_t *mi = (mjson_int_t *)mv;
     if (mi->h.text == NULL) {
         mi->i = 0;
+    } else if (mjson_parse(mv, 0) < 0) {
+        set_error(pe, MJSONE_PARSE);
+        /* 解析错误,仍然要返回已经解析的部分值 */
     }
-    /* text不为NULL,证明解析过,基本类型解析即赋值 */
 
     return mi->i;
 }
@@ -262,6 +309,8 @@ double MJSON_GET_FUN_NAME(double)(mjson_value_t *mv, mjson_error_t *pe) {
     mjson_double_t *md = (mjson_double_t *)mv;
     if (md->h.text == NULL) {
         md->d = 0.0;
+    } else if (mjson_parse(mv, 0) < 0) {
+        set_error(pe, MJSONE_PARSE);
     }
 
     return md->d;

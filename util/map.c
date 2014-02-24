@@ -315,7 +315,7 @@ int map_set(map_t *mm, const char *key, size_t len, const void *value) {
         return MAPE_MEM;
     }
 
-    return map_set_raw(mm, rs, value, 0);
+    return map_set_raw(mm, rs, value, 1);
 }
 
 static const map_iter_t null_iter;

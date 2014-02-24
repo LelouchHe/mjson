@@ -21,7 +21,7 @@ struct mjson_value_t *mjson_ini_with_ref(struct ref_str_t *rs, int is_move);
 
 /* 
  *
- * 解析mj的下一层节点(mj必然为组合类型)
+ * 对于已经赋值过的mj进行解析
  * 返回值表示状态
  * is_all表示是否需要递归解析
  *

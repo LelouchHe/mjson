@@ -34,7 +34,10 @@ int main(int argc, char *argv[]) {
 
     mj = mj_parse(str, strlen(str));
     printf("type: %d\n", mj_type(mj));
-    printf("int: %d\n", mj_get_int_error(mj, NULL));
+    if (mj_type(mj) == MJSON_OBJECT) {
+        mjson_t *v = mj_get_object_error(mj, "a", NULL);
+        printf("type: %d\nint:%d\n", mj_type(v), mj_get_int_error(v, NULL));
+    }
     mj_fini(mj);
 
     return 0;

@@ -452,9 +452,9 @@ int parser_str(const char *str, size_t len, const char *target) {
     return strncmp(nstr, target, nlen) == 0;
 }
 
-size_t parser_find_next(const char *str, size_t len, char c) {
-    if (str == NULL || len == 0) {
-        return len;
+size_t parser_find_next(const char *str, size_t begin, size_t end, char c) {
+    if (str == NULL || begin >= end) {
+        return end;
     }
 
     /* {}嵌套数量 */
@@ -464,34 +464,50 @@ size_t parser_find_next(const char *str, size_t len, char c) {
     /* 引号最多1个而已 */
     char quote = '\0';
 
-    size_t i = 0;
-    while (i < len) {
-        if (str[i] == '{') {
+    size_t i = begin;
+    while (i < end) {
+        switch (str[i]) {
+        case '{':
             object_num++;
-        } else if (str[i] == '}') {
+            break;
+
+        case '}':
             object_num--;
             if (object_num < 0) {
-                break;
+                return i;
             }
-        } else if (str[i] == '[') {
+            break;
+
+        case '[':
             array_num++;
-        } else if (str[i] == ']') {
+            break;
+
+        case ']':
             array_num--;
             if (array_num < 0) {
-                break;
+                return i;
             }
-        } else if (str[i] == '\"' || str[i] == '\'') {
+            break;
+
+        case '\"':
+        case '\'':
             if (quote == '\0') {
                 quote = str[i];
             } else if (quote == str[i]) {
                 quote = '\0';
             }
-        } else if (str[i] == '\\') {
+            break;
+
+        case '\\':
             i++;
-        } else if (str[i] == c) {
-            if (object_num == 0 && array_num == 0 && quote == '\0') {
-                break;
+            break;
+
+        default:
+            if (str[i] == c
+                && object_num == 0 && array_num == 0 && quote == '\0') {
+                return i;
             }
+            break;
         }
 
         i++;
