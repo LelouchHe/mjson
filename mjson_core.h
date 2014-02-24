@@ -45,7 +45,7 @@ mjson_t *mj_ini(size_t type);
 mjson_t *mj_parse(const char *str, size_t len);
 void mj_fini(mjson_t *mj);
 
-int mj_read(mjson_t *mj, const char *text, size_t len);
+int mj_read(mjson_t *mj, const char *str, size_t len);
 /*
 int mj_write(mjson_t *mj, char *buf, size_t buf_size);
 int mj_buf_size(mjson_t *mj);
@@ -73,11 +73,12 @@ void mj_erase_index(mjson_t *mj, size_t index);
 
 /*
  *
- * 组合类型的get有特殊之处
- * 类似map一样,get时,如果不存在,会把对应项添加进去
- * 默认的json是MJSON_NULL
+ * 默认行为类似map和原生数组
+ * kv: get不存在的key,会自动生成json,类型为MJSON_NULL
+ * iv: get不存在的key,返回的是随机指针,行为未定义
  *
  */
+
 /* kv/iv 可能更符合get/set的规范 */
 mjson_t *mj_get_kv_error(mjson_t *mj, const char *key, mjson_error_t *pe);
 void mj_set_kv_error(mjson_t *mj, const char *key, mjson_t *value, mjson_error_t *pe);

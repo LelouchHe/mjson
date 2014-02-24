@@ -223,6 +223,7 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
 
     assert(mo->m != NULL);
     map_set(mo->m, key, strlen(key), value);
+    mo->h.is_dirty = 1;;
 }
 
 /*

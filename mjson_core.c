@@ -236,3 +236,22 @@ void SET_FUN_NAME(null)(mjson_t *mj, mjson_error_t *pe) {
     TO_REFP(mj, rp);
     rp_reset(rp, mjson_ini(MJSON_NULL), (rp_fini_fun)mjson_fini);
 }
+
+int mj_read(mjson_t *mj, const char *str, size_t len) {
+    if (mj == NULL) {
+        return MJSONE_NULL;
+    }
+
+    mjson_value_t *mv = mjson_ini_with_str(str, len);
+    if (mv == NULL) {
+        return MJSONE_MEM;
+    }
+
+    TO_REFP(mj, rp);
+    if (rp_reset(rp, mv, (rp_fini_fun)mjson_fini) < 0) {
+        mjson_fini(mv);
+        return MJSONE_MEM;
+    }
+
+    return MJSONE_OK;
+}
