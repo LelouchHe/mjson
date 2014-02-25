@@ -44,6 +44,9 @@ int main(int argc, char *argv[]) {
         v = mj_get_kv_error(mj, "a", NULL);
         printf("type: %d\ndouble:%g\n", mj_type(v), mj_get_double_error(v, NULL));
     }
+
+    printf("check:%d\n", mj_check(mj));
+
     mj_fini(mj);
 
     return 0;

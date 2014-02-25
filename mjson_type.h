@@ -79,14 +79,15 @@ void mjson_fini(mjson_value_t *mv);
 
 mjson_t *mjson_object_get(mjson_value_t *mv, const char *key, mjson_error_t *pe);
 void mjson_object_set(mjson_value_t *mv, const char *key, mjson_t *value, mjson_error_t *pe);
+size_t mjson_object_size(mjson_value_t *mv);
 
-/*
 mjson_value_t *mjson_array_get(mjson_value_t *mv, size_t index, mjson_error_t *pe);
 void mjson_array_set(mjson_value_t *mv, size_t index, mjson_value_t *value, mjson_error_t *pe);
+size_t mjson_array_size(mjson_value_t *mv);
 
 const char *mjson_str_get(mjson_value_t *mv, mjson_error_t *pe);
 void mjson_str_set(mjson_value_t *mv, const char *value, mjson_error_t *pe);
-*/
+size_t mjson_str_size(mjson_value_t *mv);
 
 int mjson_int_get(mjson_value_t *mv, mjson_error_t *pe);
 void mjson_int_set(mjson_value_t *mv, int value, mjson_error_t *pe);

@@ -19,7 +19,7 @@ vector_t *vec_ini(size_t size) {
     if (size == 0) {
         size = 1;
     }
-    vec->data = (const void **)malloc(size * sizeof (void *));
+    vec->data = (const void **)calloc(size, sizeof (void *));
     if (vec->data == NULL) {
         free(vec);
         return NULL;
@@ -86,6 +86,8 @@ static size_t grow(vector_t *vec, size_t size) {
     if (n == NULL) {
         return vec->size;
     }
+    /* 默认值 */
+    memset((void *)n + vec->size, 0, nsize - vec->size);
 
     vec->size = nsize;
     free(vec->data);
@@ -95,9 +97,9 @@ static size_t grow(vector_t *vec, size_t size) {
 }
 
 
-int vec_set(vector_t *vec, size_t offset, const void *value) {
+size_t vec_set(vector_t *vec, size_t offset, const void *value) {
     if (vec == NULL) {
-        return VECE_NULL;
+        return 0;
     }
     assert(vec->data != NULL);
 
@@ -139,7 +141,7 @@ const void **vec_data(vector_t *vec) {
     return vec->data;
 }
 
-int vec_push(vector_t *vec, const void *value) {
+size_t vec_push(vector_t *vec, const void *value) {
     return vec_set(vec, vec->num, value);
 }
 
@@ -155,11 +157,12 @@ const void *vec_back(vector_t *vec) {
     return vec_get(vec, vec->num - 1);
 }
 
-int vec_append_private(vector_t *vec, ...) {
+size_t vec_append_private(vector_t *vec, ...) {
     if (vec == NULL) {
-        return VECE_NULL;
+        return 0;
     }
-    int num = 0;
+
+    size_t num = 0;
     va_list args;
     va_start(args, vec);
     const void *v = NULL;

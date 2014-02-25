@@ -1,9 +1,9 @@
-#include "mjson_type.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#include "mjson_type.h"
 
 #include "refp/refp.h"
 #include "util/ref_str.h"
@@ -11,6 +11,7 @@
 #include "util/vector.h"
 
 #include "mjson_parser.h"
+#include "mjson_writer.h"
 
 #define MJSON_INI_FUN_NAME(type) mjson_##type##_ini
 #define MJSON_FINI_FUN_NAME(type) mjson_##type##_fini
@@ -197,11 +198,13 @@ mjson_t *MJSON_GET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_er
 
 void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *value, mjson_error_t *pe) {
     if (mv == NULL) {
+        mj_fini(value);
         set_error(pe, MJSONE_NULL);
         return;
     }
 
     if (mv->type != MJSON_OBJECT) {
+        mj_fini(value);
         set_error(pe, MJSONE_TYPE);
         return;
     }
@@ -211,20 +214,92 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
         if (mo->m == NULL) {
             mo->m = map_ini(0);
             if (mo->m == NULL) {
+                mj_fini(value);
                 set_error(pe, MJSONE_MEM);
                 return;
             }
             mo->h.is_dirty = 1;;
         }
     } else if (mjson_parse(mv, 0) < 0) {
+        mj_fini(value);
         set_error(pe, MJSONE_PARSE);
         return;
     }
 
     assert(mo->m != NULL);
-    map_set(mo->m, key, strlen(key), value);
-    mo->h.is_dirty = 1;;
+    /* 失败了,就没有改变 */
+    if (map_set(mo->m, key, strlen(key), value) < 0) {
+        mj_fini(value);
+    } else {
+        mo->h.is_dirty = 1;;
+    }
 }
+
+size_t mjson_object_size(mjson_value_t *mv) {
+    if (mv == NULL) {
+        return 0;
+    }
+    if (mv->type != MJSON_OBJECT) {
+        return 0;
+    }
+
+    mjson_object_t *mo = (mjson_object_t *)mv;
+    if (mo->h.text != NULL) {
+        mjson_parse(mv, 0);
+    }
+
+    size_t s = 0;
+    if (mo->m != NULL) {
+        s = map_num(mo->m);
+    }
+
+    return s;
+}
+
+size_t mjson_array_size(mjson_value_t *mv) {
+    if (mv == NULL) {
+        return 0;
+    }
+    if (mv->type != MJSON_ARRAY) {
+        return 0;
+    }
+
+    mjson_array_t *ma = (mjson_array_t *)mv;
+    if (ma->h.text != NULL) {
+        mjson_parse(mv, 0);
+    }
+
+    size_t s = 0;
+    if (ma->v != NULL) {
+        s = vec_num(ma->v);
+    }
+
+    return s;
+}
+
+size_t mjson_str_size(mjson_value_t *mv) {
+    if (mv == NULL) {
+        return 0;
+    }
+    if (mv->type != MJSON_STRING) {
+        return 0;
+    }
+
+    mjson_str_t *ms = (mjson_str_t *)mv;
+
+    size_t s = 0;
+    if (ms->h.text != NULL) {
+        if (ms->h.is_str) {
+            s = strlen((char *)ms->h.text);
+        } else {
+            ref_str_data_t d = rs_get(ms->h.text);
+            s = d.end - d.begin;
+        }
+    }
+
+    return s;
+}
+
 
 /*
  *
@@ -271,15 +346,11 @@ void MJSON_SET_FUN_NAME(int)(mjson_value_t *mv, int value, mjson_error_t *pe) {
         return;
     }
 
-    char str[32];
-    size_t len = snprintf(str, 31, "%d", value);
-    char *text = (char *)malloc((len + 1) * sizeof (char));
+    char *text = mjson_write_int(value);
     if (text == NULL) {
         set_error(pe, MJSONE_MEM);
         return;
     }
-    strncpy(text, str, len);
-    text[len] = '\0';
 
     mi->i = value;
     if (mi->h.text != NULL) {
@@ -333,15 +404,11 @@ void MJSON_SET_FUN_NAME(double)(mjson_value_t *mv, double value, mjson_error_t *
         return;
     }
 
-    char str[64];
-    size_t len = snprintf(str, 63, "%g", value);
-    char *text = (char *)malloc((len + 1) * sizeof (char));
+    char *text = mjson_write_double(value);
     if (text == NULL) {
         set_error(pe, MJSONE_MEM);
         return;
     }
-    strncpy(text, str, len);
-    text[len] = '\0';
 
     md->d = value;
     if (md->h.text != NULL) {

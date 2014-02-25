@@ -42,20 +42,22 @@ struct mjson_error_t {
 typedef struct mjson_error_t mjson_error_t;
 
 mjson_t *mj_ini(size_t type);
+/* 是不是叫mj_ini_with_str更好? */
 mjson_t *mj_parse(const char *str, size_t len);
 void mj_fini(mjson_t *mj);
 
+
 int mj_read(mjson_t *mj, const char *str, size_t len);
 /*
-int mj_write(mjson_t *mj, char *buf, size_t buf_size);
-int mj_buf_size(mjson_t *mj);
+size_t mj_write(mjson_t *mj, char buf[], size_t buf_size);
 */
 
+size_t mj_buf_size(mjson_t *mj);
+
 int mj_type(mjson_t *mj);
-/*
-int mj_check(mjson_t *mj);
 size_t mj_size(mjson_t *mj);
-*/
+/* 返回bool */
+int mj_check(mjson_t *mj);
 
 /*
 void mj_erase_key(mjson_t *mj, const char *key);
@@ -68,14 +70,14 @@ void mj_erase_index(mjson_t *mj, size_t index);
  * 错误时返回默认值(NULL/0.0/0/false),不进行特别处理
  * 存在pe,就赋值,没有的话,就忽略了
  * set时取消了返回值,避免get/set不统一,造成歧义
+ * set后,value的生存期被接管,即使失败也不会有泄漏内存
  *
  */
 
 /*
  *
- * 默认行为类似map和原生数组
- * kv: get不存在的key,会自动生成json,类型为MJSON_NULL
- * iv: get不存在的key,返回的是随机指针,行为未定义
+ * 默认行为类似map
+ * get不存在的key,会自动生成json,类型为MJSON_NULL
  *
  */
 

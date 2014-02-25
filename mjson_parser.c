@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-
 #include "mjson_parser.h"
 
 #include "util/ref_str.h"
@@ -319,10 +318,6 @@ int mjson_parse(mjson_value_t *mv, int is_all) {
     if (mv == NULL) {
         return -1;
     }
-    /* 暂时只解析一层 */
-    assert(is_all == 0);
-
-    /* 必须是赋值过的 */
     assert(mv->text != NULL);
 
     switch (mv->type) {
@@ -335,6 +330,18 @@ int mjson_parse(mjson_value_t *mv, int is_all) {
                     return -1;
                 }
             }
+            assert(mo->m != NULL);
+            if (is_all) {
+                map_iter_t it = map_iter_next(mo->m, NULL);
+                while (it.v != NULL) {
+                    mjson_t *v = (mjson_t *)map_iter_getv(&it);
+                    if (!mj_check(v)) {
+                        return -1;
+                    }
+
+                    it = map_iter_next(mo->m, &it);
+                }
+            }
         }
         break;
 
@@ -345,6 +352,16 @@ int mjson_parse(mjson_value_t *mv, int is_all) {
                 ma->v = mp_array_ini(ma->h.text);
                 if (ma->v == NULL) {
                     return -1;
+                }
+            }
+            assert(ma->v != NULL);
+            if (is_all) {
+                size_t num = vec_num(ma->v);
+                while (num-- > 0) {
+                    mjson_t *v = (mjson_t *)vec_get(ma->v, num);
+                    if (v != NULL && !mj_check(v)) {
+                        return -1;
+                    }
                 }
             }
         }

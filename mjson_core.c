@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "refp/refp.h"
 #include "util/ref_str.h"
 #include "util/map.h"
 #include "util/vector.h"
-#include "refp/refp.h"
 
 #include "mjson_type.h"
 #include "mjson_parser.h"
+#include "mjson_writer.h"
 
 mjson_t *mj_ini(size_t type) {
     mjson_value_t *mv = mjson_ini(type);
@@ -254,4 +255,53 @@ int mj_read(mjson_t *mj, const char *str, size_t len) {
     }
 
     return MJSONE_OK;
+}
+
+size_t mj_size(mjson_t *mj) {
+    if (mj == NULL) {
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    size_t s = 0;
+    switch (mv->type) {
+    case MJSON_OBJECT:
+        s = mjson_object_size(mv);
+        break;
+
+    case MJSON_ARRAY:
+        s = mjson_array_size(mv);
+        break;
+
+    case MJSON_STRING:
+        s = mjson_str_size(mv);
+        break;
+
+    default:
+        break;
+    }
+
+    return s;
+}
+
+int mj_check(mjson_t *mj) {
+    if (mj == NULL) {
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    if (mv->text == NULL) {
+        return 0;
+    }
+
+    return mjson_parse(mv, 1) == 0;
+}
+
+size_t mj_buf_size(mjson_t *mj) {
+    if (mj == NULL) {
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    return mjson_buf_size(mv);
 }
