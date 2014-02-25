@@ -45,47 +45,47 @@ size_t mjson_buf_size(mjson_value_t *mv) {
         return 0;
     }
 
-    /* 没有修改过,且有值 */
-    if (!mv->is_dirty && mv->text != NULL) {
-        size_t s = 0;
-        if (mv->is_str) {
-            s = strlen((char *)mv->text);
-        } else {
-            ref_str_data_t d = rs_get(mv->text);
-            s = d.end - d.begin;
-        }
-
-        return s;
-    }
-
     size_t s = 0;
     switch (mv->type) {
     case MJSON_OBJECT:
-        {
-            mjson_object_t *mo = (mjson_object_t *)mv;
-            if (!mo->h.is_dirty) {
-                /* 没有修改过,且text==NULL,表示是默认,即"{}"  */
-                s = 2;
-            } else {
-                /* 只要修改过,就不能看text了 */
-            }
-        }
         break;
 
     case MJSON_ARRAY:
         break;
 
     case MJSON_STRING:
+        if (mv->text == NULL) {
+            /* 空初始化,'\"\"' */
+            s = 2;
+        } else if (mv->is_str) {
+            /* 独立字符串时,没有引号 */
+            s = strlen((char *)mv->text) + 2;
+        } else {
+            ref_str_data_t d = rs_get(mv->text);
+            s = d.end - d.begin;
+        }
         break;
 
-        /* int,double,true,false,null */
-    default:
-        if (mv->is_str) {
+    case MJSON_INTEGER:
+    case MJSON_DOUBLE:
+        if (mv->text == NULL) {
+            /* 空初始化,'0'  */
+            s = 1;
+        } else if (mv->is_str) {
             s = strlen((char *)mv->text);
         } else {
             ref_str_data_t d = rs_get(mv->text);
             s = d.end - d.begin;
         }
+        break;
+
+    case MJSON_TRUE:
+    case MJSON_FALSE:
+    case MJSON_NULL:
+        s = strlen((char *)mv->text);
+        break;
+
+    default:
         break;
     }
 
