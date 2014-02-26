@@ -13,26 +13,26 @@ int main() {
     keys[4] = rs_ini("4", 0);
 
     map_t *m = map_ini(3);
-    map_set_ref(m, keys[0], "0");
+    map_set_ref(m, keys[0], "0", 0);
     v = (const char *)map_get_ref(m, keys[0]);
     printf("v:%s\n", v);
 
     rs_debug(keys[0]);
 
-    map_set_ref(m, keys[0], NULL);
+    map_set_ref(m, keys[0], NULL, 0);
     v = (const char *)map_get_ref(m, keys[0]);
     printf("v:%s\n", v);
 
-    map_set_ref(m, keys[0], NULL);
+    map_set_ref(m, keys[0], NULL, 0);
 
-    map_set_ref(m, keys[0], "0");
-    map_set_ref(m, keys[1], "1");
-    map_set_ref(m, keys[2], "2");
-    map_set_ref(m, keys[3], "3");
-    map_set_ref(m, keys[4], "4");
-    map_set_ref(m, keys[1], NULL);
-    map_set_ref(m, keys[4], NULL);
-    map_set_ref(m, keys[2], NULL);
+    map_set_ref(m, keys[0], "0", 0);
+    map_set_ref(m, keys[1], "1", 0);
+    map_set_ref(m, keys[2], "2", 0);
+    map_set_ref(m, keys[3], "3", 0);
+    map_set_ref(m, keys[4], "4", 0);
+    map_set_ref(m, keys[1], NULL, 0);
+    map_set_ref(m, keys[4], NULL, 0);
+    map_set_ref(m, keys[2], NULL, 0);
 
     map_iter_t it = map_iter_next(m, NULL);
     while (it.v != NULL) {
@@ -53,7 +53,7 @@ int main() {
 
     printf("-------\n");
 
-    map_set(m, "100", "100");
+    map_set(m, "100", 3, "100");
     map_debug(m);
 
     map_fini(m);

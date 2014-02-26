@@ -75,15 +75,18 @@ void mjson_fini(mjson_value_t *mv);
 
 /*
  * get/set
+ * erase不返回值,为了简化json生存期控制
  */
 
 mjson_t *mjson_object_get(mjson_value_t *mv, const char *key, mjson_error_t *pe);
 void mjson_object_set(mjson_value_t *mv, const char *key, mjson_t *value, mjson_error_t *pe);
 size_t mjson_object_size(mjson_value_t *mv);
+void mjson_object_erase(mjson_value_t *mv, const char *key);
 
 mjson_t *mjson_array_get(mjson_value_t *mv, size_t index, mjson_error_t *pe);
 void mjson_array_set(mjson_value_t *mv, size_t index, mjson_t *value, mjson_error_t *pe);
 size_t mjson_array_size(mjson_value_t *mv);
+void mjson_array_erase(mjson_value_t *mv, size_t index);
 
 const char *mjson_str_get(mjson_value_t *mv, mjson_error_t *pe);
 void mjson_str_set(mjson_value_t *mv, const char *value, mjson_error_t *pe);

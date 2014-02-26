@@ -229,27 +229,13 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
 
     size_t key_len = strlen(key);
     mjson_t *old_v = (mjson_t *)map_get(mo->m, key, key_len);
-    if (old_v == NULL) {
-        if (value == NULL) {
-            value = mj_ini(MJSON_NULL);
-            if (value == NULL) {
-                set_error(pe, MJSONE_MEM);
-                return;
-            }
-        }
-        if (map_set(mo->m, key, key_len, value) < 0) {
-            mj_fini(value);
-            set_error(pe, MJSONE_MEM);
-            return;
-        }
-    } else {
-        if (value == NULL) {
-            rp_reset(old_v, mjson_ini(MJSON_NULL), (rp_fini_fun)mjson_fini);
-        } else {
-            rp_swap(old_v, value);
-            mj_fini(value);
-        }
+    if (map_set(mo->m, key, key_len, value) < 0) {
+        mj_fini(value);
+        set_error(pe, MJSONE_MEM);
+        return;
     }
+    mj_fini(old_v);
+
     mo->h.is_dirty = 1;
 }
 
@@ -266,12 +252,26 @@ size_t mjson_object_size(mjson_value_t *mv) {
         mjson_parse(mv, 0);
     }
 
-    size_t s = 0;
-    if (mo->m != NULL) {
-        s = map_num(mo->m);
+    return map_num(mo->m);
+}
+
+void mjson_object_erase(mjson_value_t *mv, const char *key) {
+    if (mv == NULL || key == NULL) {
+        return;
+    }
+    if (mv->type != MJSON_OBJECT) {
+        return;
     }
 
-    return s;
+    mjson_object_t *mo = (mjson_object_t *)mv;
+    if (mo->h.text != NULL) {
+        mjson_parse(mv, 0);
+    }
+
+    mjson_t *v = (mjson_t *)map_erase(mo->m, key, strlen(key));
+    mj_fini(v);
+
+    mo->h.is_dirty = 1;
 }
 
 mjson_t *MJSON_GET_FUN_NAME(array)(mjson_value_t *mv, size_t index, mjson_error_t *pe) {
@@ -375,12 +375,26 @@ size_t mjson_array_size(mjson_value_t *mv) {
         mjson_parse(mv, 0);
     }
 
-    size_t s = 0;
-    if (ma->v != NULL) {
-        s = vec_num(ma->v);
+    return vec_num(ma->v);
+}
+
+void mjson_array_erase(mjson_value_t *mv, size_t index) {
+    if (mv == NULL) {
+        return;
+    }
+    if (mv->type != MJSON_ARRAY) {
+        return;
     }
 
-    return s;
+    mjson_array_t *ma = (mjson_array_t *)mv;
+    if (ma->h.text != NULL) {
+        mjson_parse(mv, 0);
+    }
+
+    mjson_t *v = (mjson_t *)vec_erase(ma->v, index);
+    mj_fini(v);
+
+    ma->h.is_dirty = 1;
 }
 
 /*

@@ -4,6 +4,8 @@
 
 #include "map.h"
 
+#define HEAD_NULL ((const void *)~0)
+
 typedef struct map_node_t map_node_t;
 
 /*
@@ -32,11 +34,10 @@ struct map_t {
  *
  */
 static int is_table_head(map_t *mm, map_node_t *n) {
-    if (n == NULL || n->value != NULL) {
-        return 0;
-    }
+    assert(mm != NULL);
+    assert(n != NULL);
 
-    return n >= mm->table && n < mm->table + mm->size;
+    return n->value == HEAD_NULL;
 }
 
 static size_t primes[] = {
@@ -98,6 +99,9 @@ map_t *map_ini(size_t size) {
         free(mm);
         return NULL;
     }
+    while (size-- > 0) {
+        mm->table[size].value = HEAD_NULL;
+    }
 
     return mm;
 }
@@ -111,7 +115,7 @@ void map_fini(map_t *mm) {
     map_node_t *h = mm->head;
     while (h != NULL) {
         map_node_t *next = h->next;
-        if (!is_table_head(mm, h)) {
+        if (h->value != HEAD_NULL) {
             rs_fini(h->key);
             free(h);
         }
@@ -174,7 +178,7 @@ static long elf_hash(const char *str, size_t begin, size_t end) {
  *
  * 返回的prev->next有以下性质:
  * 0. 为NULL
- * 1. 无效(value==NULL)
+ * 1. 无效(value==HEAD_NULL)
  * 2. 为该key
  *
  */
@@ -182,26 +186,12 @@ static map_node_t *find_prev(map_t *mm, const char *key, size_t begin, size_t en
     int hash = djb_hash(key, begin, end) % mm->size;
     int elf = elf_hash(key, begin, end);
     map_node_t *prev = &(mm->table[hash]);
-    while (prev->next != NULL && prev->next->value != NULL
+    while (prev->next != NULL && prev->next->value != HEAD_NULL
         && prev->next->elf != elf) {
         prev = prev->next;
     }
 
     return prev;
-}
-
-static const void *map_get_raw(map_t *mm, const char *key, size_t begin, size_t end) {
-    if (key == NULL || begin >= end) {
-        return NULL;
-    }
-
-    map_node_t *prev = find_prev(mm, key, begin, end);
-
-    if (prev->next != NULL && prev->next->value != NULL) {
-        return prev->next->value;
-    }
-
-    return NULL;
 }
 
 const void *map_get_ref(map_t *mm, ref_str_t *key) {
@@ -216,7 +206,7 @@ const void *map_get_ref(map_t *mm, ref_str_t *key) {
 
     ref_str_data_t d = rs_get(key);
 
-    return map_get_raw(mm, d.str, d.begin, d.end);
+    return map_get(mm, d.str + d.begin, d.end - d.begin);
 }
 
 const void *map_get(map_t *mm, const char *key, size_t len) {
@@ -229,12 +219,17 @@ const void *map_get(map_t *mm, const char *key, size_t len) {
         return NULL;
     }
 
-    return map_get_raw(mm, key, 0, len);
+    map_node_t *prev = find_prev(mm, key, 0, len);
+    if (prev->next != NULL && prev->next->value != HEAD_NULL) {
+        return prev->next->value;
+    }
+
+    return NULL;
 }
 
 /*
  *
- * value=NULL表示删除操作
+ * value可以为NULL
  * 允许两不同链表头相连,合并删除工作在iter函数中操作
  *
  */
@@ -243,28 +238,12 @@ static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_move
     ref_str_data_t d = rs_get(key);
     map_node_t *prev = find_prev(mm, d.str, d.begin, d.end);
 
-    if (prev->next != NULL && prev->next->value != NULL) {
+    if (prev->next != NULL && prev->next->value != HEAD_NULL) {
         prev->next->value = value;
-        /* 非移动需要清理key */
         if (is_move) {
             rs_fini(key);
         }
-        if (value == NULL) {
-            map_node_t *cur = prev->next;
-            prev->next = cur->next;
-            rs_fini(cur->key);
-            free(cur);
-            mm->num--;
-            if (mm->num == 0) {
-                mm->head = NULL;
-            }
-            return MAPE_ERASE;
-        }
         return MAPE_OVERWRITTEN;
-    }
-
-    if (value == NULL) {
-        return MAPE_ERASE;
     }
 
     map_node_t *node = (map_node_t *)malloc(sizeof (map_node_t));
@@ -286,7 +265,7 @@ static int map_set_raw(map_t *mm, ref_str_t *key, const void *value, int is_move
     prev->next = node;
 
     /* 链表头第一个添加的元素 */
-    if (is_table_head(mm, prev)) {
+    if (prev->value == HEAD_NULL) {
         node->next = mm->head;
         mm->head = prev;
     }
@@ -318,6 +297,36 @@ int map_set(map_t *mm, const char *key, size_t len, const void *value) {
     return map_set_raw(mm, rs, value, 1);
 }
 
+const void *map_erase_ref(map_t *mm, ref_str_t *key) {
+    if (mm == NULL) {
+        return NULL;
+    }
+
+    ref_str_data_t d = rs_get(key);
+    return map_erase(mm, d.str + d.begin, d.end - d.begin);
+}
+
+const void *map_erase(map_t *mm, const char *key, size_t len) {
+    if (mm == NULL || key == NULL) {
+        return NULL;
+    }
+    assert(mm->table != NULL);
+
+    map_node_t *prev = find_prev(mm, key, 0, len);
+    if (prev->next != NULL && prev->next->value != HEAD_NULL) {
+        map_node_t *cur = prev->next;
+        const void *v = cur->value;
+
+        prev->next = cur->next;
+        rs_fini(cur->key);
+        free(cur);
+
+        return v;
+    }
+
+    return NULL;
+}
+
 static const map_iter_t null_iter;
 
 /*
@@ -346,12 +355,12 @@ map_iter_t map_iter_next(map_t *mm, map_iter_t *it) {
 
     while (prev != NULL && prev->next != NULL) {
         map_node_t *cur = prev->next;
-        if (cur->value != NULL) {
+        if (cur->value != HEAD_NULL) {
             next_it.v = cur;
             return next_it;
         }
 
-        if (is_table_head(mm, cur->next)) {
+        if (cur->next != NULL && cur->next == HEAD_NULL) {
             prev->next = cur->next;
             cur->next = NULL;
             if (mm->head == cur) {

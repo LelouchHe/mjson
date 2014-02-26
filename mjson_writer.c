@@ -156,7 +156,6 @@ static size_t mw_write_h(mjson_value_t *mv, char *buf) {
                 while (it.v != NULL) {
                     ref_str_data_t k = map_iter_getk(&it);
                     mjson_t *v = (mjson_t *)map_iter_getv(&it);
-                    TO_TYPE(v, mjson_value_t, nv);
 
                     buf[len++] = '\"';
                     strncpy(buf + len, k.str + k.begin, k.end - k.begin);
@@ -165,7 +164,13 @@ static size_t mw_write_h(mjson_value_t *mv, char *buf) {
 
                     buf[len++] = ':';
 
-                    len += mw_write_h(nv, buf + len);
+                    if (v == NULL) {
+                        strncpy(buf + len, "null", 4);
+                        len += 4;
+                    } else {
+                        TO_TYPE(v, mjson_value_t, nv);
+                        len += mw_write_h(nv, buf + len);
+                    }
 
                     buf[len++] = ',';
 

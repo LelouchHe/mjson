@@ -359,3 +359,20 @@ size_t mj_strlen(mjson_t *mj) {
     return mjson_strlen(mv);
 }
 
+void mj_erase_key(mjson_t *mj, const char *key) {
+    if (mj == NULL || key == NULL) {
+        return;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    mjson_object_erase(mv, key);
+}
+
+void mj_erase_index(mjson_t *mj, size_t index) {
+    if (mj == NULL) {
+        return;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    mjson_array_erase(mv, index);
+}

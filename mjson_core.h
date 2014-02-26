@@ -42,7 +42,6 @@ struct mjson_error_t {
 typedef struct mjson_error_t mjson_error_t;
 
 mjson_t *mj_ini(size_t type);
-/* 是不是叫mj_ini_with_str更好? */
 mjson_t *mj_parse(const char *str, size_t len);
 void mj_fini(mjson_t *mj);
 
@@ -57,10 +56,8 @@ size_t mj_size(mjson_t *mj);
 /* 返回bool */
 int mj_check(mjson_t *mj);
 
-/*
 void mj_erase_key(mjson_t *mj, const char *key);
 void mj_erase_index(mjson_t *mj, size_t index);
-*/
 
 
 /*
