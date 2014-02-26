@@ -234,7 +234,7 @@ const void *map_get(map_t *mm, const char *key, size_t len) {
 
 /*
  *
- * value=NULL時表示删除操作
+ * value=NULL表示删除操作
  * 允许两不同链表头相连,合并删除工作在iter函数中操作
  *
  */

@@ -225,14 +225,32 @@ void MJSON_SET_FUN_NAME(object)(mjson_value_t *mv, const char *key, mjson_t *val
         set_error(pe, MJSONE_PARSE);
         return;
     }
-
     assert(mo->m != NULL);
-    /* 失败了,就没有改变 */
-    if (map_set(mo->m, key, strlen(key), value) < 0) {
-        mj_fini(value);
+
+    size_t key_len = strlen(key);
+    mjson_t *old_v = (mjson_t *)map_get(mo->m, key, key_len);
+    if (old_v == NULL) {
+        if (value == NULL) {
+            value = mj_ini(MJSON_NULL);
+            if (value == NULL) {
+                set_error(pe, MJSONE_MEM);
+                return;
+            }
+        }
+        if (map_set(mo->m, key, key_len, value) < 0) {
+            mj_fini(value);
+            set_error(pe, MJSONE_MEM);
+            return;
+        }
     } else {
-        mo->h.is_dirty = 1;;
+        if (value == NULL) {
+            rp_reset(old_v, mjson_ini(MJSON_NULL), (rp_fini_fun)mjson_fini);
+        } else {
+            rp_swap(old_v, value);
+            mj_fini(value);
+        }
     }
+    mo->h.is_dirty = 1;
 }
 
 size_t mjson_object_size(mjson_value_t *mv) {
@@ -256,6 +274,94 @@ size_t mjson_object_size(mjson_value_t *mv) {
     return s;
 }
 
+mjson_t *MJSON_GET_FUN_NAME(array)(mjson_value_t *mv, size_t index, mjson_error_t *pe) {
+    if (mv == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return NULL;
+    }
+
+    if (mv->type != MJSON_ARRAY) {
+        set_error(pe, MJSONE_TYPE);
+        return NULL;
+    }
+
+    mjson_array_t *ma = (mjson_array_t *)mv;
+    if (ma->h.text == NULL) {
+        if (ma->v == NULL) {
+            ma->v = vec_ini(0);
+            if (ma->v == NULL) {
+                set_error(pe, MJSONE_MEM);
+                return NULL;
+            }
+            ma->h.is_dirty = 1;
+        }
+    } else if (mjson_parse(mv, 0) < 0) {
+        set_error(pe, MJSONE_PARSE);
+        return NULL;
+    }
+    assert(ma->v != NULL);
+
+    if (index >= vec_num(ma->v)) {
+        set_error(pe, MJSONE_RANGE);
+        return NULL;
+    }
+
+    mjson_t *v = (mjson_t *)vec_get(ma->v, index);
+    if (v == NULL) {
+        v = mj_ini(MJSON_NULL);
+        if (v == NULL) {
+            set_error(pe, MJSONE_MEM);
+            return NULL;
+        }
+        vec_set(ma->v, index, v);
+        ma->h.is_dirty = 1;
+    }
+
+    return v;
+}
+
+void MJSON_SET_FUN_NAME(array)(mjson_value_t *mv, size_t index, mjson_t *value, mjson_error_t *pe) {
+    if (mv == NULL) {
+        mj_fini(value);
+        set_error(pe, MJSONE_NULL);
+        return;
+    }
+
+    if (mv->type != MJSON_ARRAY) {
+        mj_fini(value);
+        set_error(pe, MJSONE_TYPE);
+        return;
+    }
+
+    mjson_array_t *ma = (mjson_array_t *)mv;
+    if (ma->h.text == NULL) {
+        if (ma->v == NULL) {
+            ma->v = vec_ini(0);
+            if (ma->v == NULL) {
+                mj_fini(value);
+                set_error(pe, MJSONE_MEM);
+                return;
+            }
+            ma->h.is_dirty = 1;;
+        }
+    } else if (mjson_parse(mv, 0) < 0) {
+        mj_fini(value);
+        set_error(pe, MJSONE_PARSE);
+        return;
+    }
+    assert(ma->v != NULL);
+
+    mjson_t *old_v = (mjson_t *)vec_get(ma->v, index);
+    if (vec_set(ma->v, index, value) < 0) {
+        mj_fini(value);
+        set_error(pe, MJSONE_MEM);
+        return;
+    }
+    mj_fini(old_v);
+
+    ma->h.is_dirty = 1;;
+}
+
 size_t mjson_array_size(mjson_value_t *mv) {
     if (mv == NULL) {
         return 0;
@@ -277,34 +383,9 @@ size_t mjson_array_size(mjson_value_t *mv) {
     return s;
 }
 
-size_t mjson_str_size(mjson_value_t *mv) {
-    if (mv == NULL) {
-        return 0;
-    }
-    if (mv->type != MJSON_STRING) {
-        return 0;
-    }
-
-    mjson_str_t *ms = (mjson_str_t *)mv;
-
-    size_t s = 0;
-    if (ms->h.text != NULL) {
-        if (ms->h.is_str) {
-            s = strlen((char *)ms->h.text);
-        } else {
-            ref_str_data_t d = rs_get(ms->h.text);
-            s = d.end - d.begin;
-        }
-    }
-
-    return s;
-}
-
-
 /*
  *
  * 基本类型
- *
  *
  */
 

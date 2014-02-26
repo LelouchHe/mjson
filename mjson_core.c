@@ -115,6 +115,48 @@ void SET_FUN_NAME(kv)(mjson_t *mj, const char *key, mjson_t *value, mjson_error_
     MJSON_SET_FUN_NAME(object)(mv, key, value, pe);
 }
 
+mjson_t *GET_FUN_NAME(iv)(mjson_t *mj, size_t index, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return NULL;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    if (mv->type != MJSON_ARRAY) {
+        mjson_value_t *nmv = mjson_ini(MJSON_ARRAY);
+        if (nmv == NULL) {
+            set_error(pe, MJSONE_MEM);
+            return NULL;
+        }
+
+        TO_REFP(mj, rp);
+        rp_reset(rp, nmv, (rp_fini_fun)mjson_fini);
+    }
+
+    return MJSON_GET_FUN_NAME(array)(mv, index, pe);
+}
+
+void SET_FUN_NAME(iv)(mjson_t *mj, size_t index, mjson_t *value, mjson_error_t *pe) {
+    if (mj == NULL) {
+        set_error(pe, MJSONE_NULL);
+        return;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+    if (mv->type != MJSON_ARRAY) {
+        mjson_value_t *nmv = mjson_ini(MJSON_ARRAY);
+        if (nmv == NULL) {
+            set_error(pe, MJSONE_MEM);
+            return;
+        }
+
+        TO_REFP(mj, rp);
+        rp_reset(rp, nmv, (rp_fini_fun)mjson_fini);
+    }
+
+    MJSON_SET_FUN_NAME(array)(mv, index, value, pe);
+}
+
 #define GET_FUN(type_t, def)                                    \
 type_t GET_FUN_NAME(type_t)(mjson_t *mj, mjson_error_t *pe) {   \
     if (mj == NULL) {                                           \
@@ -257,6 +299,16 @@ int mj_read(mjson_t *mj, const char *str, size_t len) {
     return MJSONE_OK;
 }
 
+size_t mj_write(mjson_t *mj, char buf[], size_t buf_size) {
+    if (mj == NULL) {
+        return 0;
+    }
+
+    TO_TYPE(mj, mjson_value_t, mv);
+
+    return mjson_write(mv, buf, buf_size);
+}
+
 size_t mj_size(mjson_t *mj) {
     if (mj == NULL) {
         return 0;
@@ -274,10 +326,11 @@ size_t mj_size(mjson_t *mj) {
         break;
 
     case MJSON_STRING:
-        s = mjson_str_size(mv);
+        s = mjson_strlen(mv);
         break;
 
     default:
+        s = 1;
         break;
     }
 
@@ -297,11 +350,12 @@ int mj_check(mjson_t *mj) {
     return mjson_parse(mv, 1) == 0;
 }
 
-size_t mj_buf_size(mjson_t *mj) {
+size_t mj_strlen(mjson_t *mj) {
     if (mj == NULL) {
         return 0;
     }
 
     TO_TYPE(mj, mjson_value_t, mv);
-    return mjson_buf_size(mv);
+    return mjson_strlen(mv);
 }
+

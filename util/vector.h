@@ -18,17 +18,20 @@ void vec_fini(vector_t *vec);
 size_t vec_size(vector_t *vec);
 size_t vec_num(vector_t *vec);
 
-/* 对于没有添加的值,为NULL */
+/*
+ * 对于没有添加的值,为NULL
+ * 对于超过num的,也返回NULL
+ * 调用方通过比较vec_size自行判断两种情况
+ */
 const void *vec_get(vector_t *vec, size_t offset);
 /* 
  *
- * value可以为NULL,但是无法区分默认为NULL还是设置为NULL
+ * value可以为NULL
  * 返回值是添加的个数
  * 0表示没有添加成功
  *
  */
 size_t vec_set(vector_t *vec, size_t offset, const void *value);
-/* 删除操作会移动底层数据,和单纯置NULL不同 */
 const void *vec_erase(vector_t *vec, size_t offset);
 
 const void **vec_data(vector_t *vec);

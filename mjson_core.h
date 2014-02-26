@@ -48,11 +48,9 @@ void mj_fini(mjson_t *mj);
 
 
 int mj_read(mjson_t *mj, const char *str, size_t len);
-/*
 size_t mj_write(mjson_t *mj, char buf[], size_t buf_size);
-*/
 
-size_t mj_buf_size(mjson_t *mj);
+size_t mj_strlen(mjson_t *mj);
 
 int mj_type(mjson_t *mj);
 size_t mj_size(mjson_t *mj);
@@ -85,10 +83,8 @@ void mj_erase_index(mjson_t *mj, size_t index);
 mjson_t *mj_get_kv_error(mjson_t *mj, const char *key, mjson_error_t *pe);
 void mj_set_kv_error(mjson_t *mj, const char *key, mjson_t *value, mjson_error_t *pe);
 
-/*
 mjson_t *mj_get_iv_error(mjson_t *mj, size_t index, mjson_error_t *pe);
 void mj_set_iv_error(mjson_t *mj, size_t index, mjson_t *value, mjson_error_t *pe);
-*/
 
 const char *mj_get_str_error(mjson_t *mj, mjson_error_t *pe);
 void mj_set_str_error(mjson_t *mj, const char *key, mjson_error_t *pe);

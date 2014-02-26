@@ -17,7 +17,7 @@ vector_t *vec_ini(size_t size) {
         return NULL;
     }
     if (size == 0) {
-        size = 1;
+        size = 11;
     }
     vec->data = (const void **)calloc(size, sizeof (void *));
     if (vec->data == NULL) {
@@ -95,7 +95,6 @@ static size_t grow(vector_t *vec, size_t size) {
 
     return nsize;
 }
-
 
 size_t vec_set(vector_t *vec, size_t offset, const void *value) {
     if (vec == NULL) {
